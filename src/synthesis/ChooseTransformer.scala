@@ -20,10 +20,9 @@ trait ChooseTransformer extends TypingTransformers {
     override def transform(tree: Tree): Tree = {
       tree match {
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
+          // SANITY CHECKS
           var foundErrors = false
-
           reporter.info(a.pos, "here!", true) 
-
           val Function(funValDefs, funBody) = predicate
 
           // we check that we're only synthesizing integers
@@ -36,11 +35,12 @@ trait ChooseTransformer extends TypingTransformers {
           if (foundErrors)
             return a
 
-          // code generation 
+          // CODE GENERATION
           // currently, generates a tuple of the right size containing only zeroes :)
           typer.typed(atOwner(currentOwner) {
+            Block(List(Literal(42)), 
             New(TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
-              List(funValDefs.map(x => Literal(0))))
+              List(funValDefs.map(x => Literal(0)))))
           })
         }
         case _ => super.transform(tree)

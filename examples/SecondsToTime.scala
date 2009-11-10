@@ -13,7 +13,6 @@ object SecondsToTime {
         && s < 60
       ) )
 
-    val (x,y) = choose((x: Int, y: Int) => x + y < 12)
 
     // should be rewritten into something looking vaguely like this:
     // val (hours, minutes, seconds) = {
