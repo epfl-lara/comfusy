@@ -1,9 +1,5 @@
-package trouloulou
-
 object Test {
-    def main(args: Array[String]) : Unit = {
-      println("OK")
-    }
+  def abc = {
+    (0, 0, 0)
+  }
 }
-
-class ABA {}

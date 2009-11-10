@@ -19,9 +19,12 @@
 
     <!-- other properties -->
     <property name="dist.jar" value="${dist.dir}/synthesis-plugin.jar" />
-    <property name="script.file" value="${base.dir}/scalac-synthesis" />
+    <property name="scalac.script.file" value="${base.dir}/scalac-synthesis" />
     <property name="scalac.default.params" value="-deprecation -unchecked" />
     <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/> 
+
+    <!-- libs -->
+    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.0.jar" />
 
     <!-- required to use the tasks scalac, fsc and scaladoc -->
     <taskdef resource="scala/tools/ant/antlib.xml">
@@ -39,6 +42,7 @@
 
     <path id="build.path">
         <path refid="scalac.class.path"/>
+        <pathelement location="${scalatest.jar}" />
         <pathelement location="${build.dir}"  />
     </path>
 
@@ -64,12 +68,13 @@
             <fileset file="./scalac-plugin.xml" />
         </jar>
 
-        <echo file="${script.file}" message="#!/bin/sh${line.separator}scalac -Xplugin:${dist.jar} $@${line.separator}" />
-        <chmod file="${script.file}" perm="u+x" />
+        <echo file="${scalac.script.file}" message="#!/bin/sh${line.separator}scalac -Xplugin:${dist.jar} -classpath ${dist.jar} $@${line.separator}" />
+        <chmod file="${scalac.script.file}" perm="u+x" />
     </target>
 
     <target name="clean" description="cleans up">
-        <delete file="${script.file}" quiet="yes" failonerror="no" />
+        <delete file="${scalac.script.file}" quiet="yes" failonerror="no" />
+        <delete file="${scala.script.file}" quiet="yes" failonerror="no" />
         <delete dir="${build.dir}" includeemptydirs="yes" quiet="yes" failonerror="no" />
         <delete dir="${dist.dir}" includeemptydirs="yes" quiet="yes" failonerror="no" />
         <delete>

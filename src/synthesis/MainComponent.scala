@@ -3,8 +3,10 @@ package synthesis
 import scala.tools.nsc._
 import scala.tools.nsc.plugins._
 
-class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin) extends PluginComponent
-{
+class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin)
+  extends PluginComponent
+  with ChooseTransformer
+{ 
   import global._
 
   // when we use 2.8.x, swap the comments in the following two lines
@@ -29,6 +31,8 @@ class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin) ext
       //global ref to freshName creator
       fresh = unit.fresh
       
+      transformChooseCalls(unit)
+
       println("Synthesis plugin was called on this unit:")
       println(unit)
     }

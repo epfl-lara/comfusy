@@ -1,5 +1,7 @@
-// package funcheck
-// 
+ package synthesis
+
+ object Extractors
+//
 // import scala.tools.nsc._
 // 
 // /** Contains extractors to pull-out interesting parts of the Scala ASTs. */
