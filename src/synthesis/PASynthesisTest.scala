@@ -30,26 +30,6 @@ class PASynthesisTest extends Spec with ShouldMatchers {
     }
   }
   
-  describe("Common functions") {
-    it("should compute the GCD of a list") {
-      Common.gcdlist((-18)::12::0::36::Nil) should equal (6)
-    }
-    it("specialMod") {
-      Common.smod(10, 7) should equal(3)
-      Common.smod(11, 7) should equal(-3)
-      Common.smod(14, 7) should equal(0)
-      Common.smod(3, 8) should equal(3)
-      Common.smod(4, 8) should equal(-4)
-      Common.smod(5, 8) should equal(-3)
-      Common.smod(-10, 7) should equal(-3)
-      Common.smod(-11, 7) should equal(3)
-      Common.smod(-14, 7) should equal(0)
-      Common.smod(-3, 8) should equal(-3)
-      Common.smod(-4, 8) should equal(-4)
-      Common.smod(-5, 8) should equal(3)
-    }
-  }
-  
   describe("PACombinations") {
     it("Should simplify expressions") {
       val pac = PACombination(0, (1, b)::(2, c)::(-2, b)::Nil, (2, x)::(1, y)::(-2, x)::Nil).simplified
