@@ -1,8 +1,12 @@
 package synthesis
 
+import Arithmetic._
+
 import scala.tools.nsc.transform.TypingTransformers
 
-trait ChooseTransformer extends TypingTransformers {
+trait ChooseTransformer
+  extends TypingTransformers
+  with ArithmeticExtractors {
   self: MainComponent =>
   import global._
 
@@ -35,13 +39,42 @@ trait ChooseTransformer extends TypingTransformers {
           if (foundErrors)
             return a
 
+          // EXTRACTIONS
+          val extractedExpression: Formula = funBody match {
+            case ExTrueLiteral() => True()
+            case ExFalseLiteral() => False()
+            case ExEquals(l,r) => {
+              println("HERE I GOT IT!!!")
+              println(l)
+              println(r)
+              null
+            }
+            case _ => {
+              reporter.error(funBody.pos, "expression in synthesis predicate is not linear arithmetic")
+              foundErrors = true
+              False() // arbitrary, but hey.
+            }
+          }
+          if (foundErrors)
+            return a
+
+          println("Corresponding formula: " + extractedExpression)
+
           // CODE GENERATION
           // currently, generates a tuple of the right size containing only zeroes :)
-          typer.typed(atOwner(currentOwner) {
-            Block(List(Literal(42)), 
-            New(TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
-              List(funValDefs.map(x => Literal(0)))))
-          })
+          if(funValDefs.length == 1) {
+            // special case for only one var:
+            typer.typed(atOwner(currentOwner) {
+              Literal(0)
+            })
+          } else {
+            // all other cases.
+            typer.typed(atOwner(currentOwner) {
+              Block(List(Literal(42)), 
+              New(TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
+                List(funValDefs.map(x => Literal(0)))))
+            })
+          }
         }
         case _ => super.transform(tree)
       }

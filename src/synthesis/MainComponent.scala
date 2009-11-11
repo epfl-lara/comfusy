@@ -32,9 +32,6 @@ class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin)
       fresh = unit.fresh
       
       transformChooseCalls(unit)
-
-      println("Synthesis plugin was called on this unit:")
-      println(unit)
     }
   }
 }

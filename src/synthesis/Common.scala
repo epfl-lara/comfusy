@@ -96,7 +96,7 @@ object Common {
     case a::Nil => a
     case (a::b::q) => lcmlist(lcm(a,b)::q)
   }
-  // Computes the GCD over a list  of numbers
+  // Computes the GCD over a list of numbers
   def gcdlist(l:List[Int]):Int = l match {
     case Nil => 1
     case 0::Nil => 1
