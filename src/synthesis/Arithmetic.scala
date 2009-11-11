@@ -6,7 +6,9 @@ import scala.collection.immutable.Set
 object Arithmetic {
   type VariableID = String
 
-  abstract class Formula
+  abstract class Formula {
+    override def toString = pp(this)
+  }
 
   case class And(formulas: List[Formula]) extends Formula
   case class Or(formulas: List[Formula]) extends Formula
@@ -16,12 +18,15 @@ object Arithmetic {
   
   abstract class Predicate extends Formula
   case class Equals(left: Term, right: Term) extends Predicate
+  case class NotEquals(left: Term, right: Term) extends Predicate
   case class LessThan(left: Term, right: Term) extends Predicate
   case class LessEqThan(left: Term, right: Term) extends Predicate
   case class GreaterThan(left: Term, right: Term) extends Predicate
   case class GreaterEqThan(left: Term, right: Term) extends Predicate
 
-  abstract class Term
+  abstract class Term {
+    override def toString = pp(this)
+  }
   case class Variable(id: VariableID) extends Term
   case class IntLit(value: Int) extends Term
   case class Neg(term: Term) extends Term
@@ -36,6 +41,7 @@ object Arithmetic {
   object Predicate {
     def unapply(pred: Predicate): Option[(Term,Term)] = pred match {
       case Equals(l,r) => Some((l,r))
+      case NotEquals(l,r) => Some((l,r))
       case LessThan(l,r) => Some((l,r))
       case LessEqThan(l,r) => Some((l,r))
       case GreaterThan(l,r) => Some((l,r))
@@ -68,5 +74,44 @@ object Arithmetic {
     case Neg(t) => variablesOf(t)
     case BinaryOperator(l,r) => variablesOf(l) ++ variablesOf(r)
     case Min(ts) => ts.foldLeft(Set.empty[VariableID])(_ ++ variablesOf(_))
+  }
+
+  /** The rest is only for pretty-printing... */
+  private val ANDSTR = " \u2227 "
+  private val ORSTR  = " \u2228 "
+  private val NOTSTR = "\u00AC"
+  private val EQSTR  = " = "
+  private val NESTR  = " \u2260 "
+  private val LTSTR  = " < "
+  private val LESTR  = " \u2264 "
+  private val GTSTR  = " > "
+  private val GESTR  = " \u2265 "
+  private val TRUESTR  = "\u22A4"
+  private val FALSESTR = "\u22A5"
+
+  private def pp(f: Formula): String = f match {
+    case And(fs) => fs.map(pp(_)).mkString("(", ANDSTR, ")")
+    case Or(fs)  => fs.map(pp(_)).mkString("(", ORSTR, ")")
+    case Not(f)  => NOTSTR + pp(f)
+    case True()  => TRUESTR
+    case False() => FALSESTR
+    case Equals(l,r) => "(" + pp(l) + EQSTR + pp(r) + ")" 
+    case NotEquals(l,r) => "(" + pp(l) + NESTR + pp(r) + ")" 
+    case LessThan(l,r) => "(" + pp(l) + LTSTR + pp(r) + ")" 
+    case LessEqThan(l,r) => "(" + pp(l) + LESTR + pp(r) + ")" 
+    case GreaterThan(l,r) => "(" + pp(l) + GTSTR + pp(r) + ")" 
+    case GreaterEqThan(l,r) => "(" + pp(l) + GESTR + pp(r) + ")" 
+  }
+
+  private def pp(t: Term): String = t match {
+    case Variable(id) => id.toString
+    case IntLit(v) => v.toString
+    case Neg(t) => "-" + pp(t)
+    case Plus(l,r) => "(" + pp(l) + " + " + pp(r) + ")"
+    case Minus(l,r) => "(" + pp(l) + " - " + pp(r) + ")"
+    case Times(l,r) => "(" + pp(l) + " * " + pp(r) + ")"
+    case Div(l,r) => "(" + pp(l) + " / " + pp(r) + ")"
+    case Modulo(l,r) => "(" + pp(l) + " % " + pp(r) + ")"
+    case Min(ts) => "min " + ts.map(pp(_)).mkString("{", ", ", "}")
   }
 }
