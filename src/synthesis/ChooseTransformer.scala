@@ -2,6 +2,8 @@ package synthesis
 
 import Arithmetic._
 
+import scala.collection.immutable.Set
+
 import scala.tools.nsc.transform.TypingTransformers
 
 trait ChooseTransformer
@@ -29,7 +31,8 @@ trait ChooseTransformer
           reporter.info(a.pos, "here!", true) 
           val Function(funValDefs, funBody) = predicate
 
-          // we check that we're only synthesizing integers
+          // we check that we're only synthesizing integers, and collect the
+          // set of input variables
           for (val valDef <- funValDefs) {
             if(valDef.tpt.tpe != definitions.IntClass.tpe) {
               reporter.error(valDef.pos, "unsupported type in call to synthesizer: " + valDef.tpt.tpe)
@@ -39,9 +42,12 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          // EXTRACTIONS
+          // for the record
+          val inputVariableSet: Set[String] = Set.empty ++ funValDefs.map(_.name.toString)
+
+          // EXTRACTION
           val extractedFormula: Formula = extractFormula(funBody) match {
-            case Some(f) => NNF(f)
+            case Some(f) => normalized(f)
             case None => {
               foundErrors = true
               False() // arbitrary, but hey.
@@ -52,6 +58,20 @@ trait ChooseTransformer
 
           println("Corresponding formula: " + extractedFormula)
 
+          // LINEARIZATION
+          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, inputVariableSet) match {
+            case Some(f) => f
+            case None => {
+              reporter.error(funBody.pos, "predicate is not in linear arithmetic")
+              foundErrors = true
+              PASynthesis.PAFalse()
+            }
+          }
+          if (foundErrors)
+            return a
+
+          println("Mikael-Style formula : " + paStyleFormula)
+          
           // CODE GENERATION
           // currently, generates a tuple of the right size containing only zeroes :)
           if(funValDefs.length == 1) {
@@ -72,6 +92,7 @@ trait ChooseTransformer
       }
     }
 
+    // tries to extract an arithmetic formula from the code.
     def extractFormula(tree: Tree): Option[Formula] = {
       case class EscapeException() extends Exception
 
@@ -99,8 +120,8 @@ trait ChooseTransformer
         case ExPlus(l,r) => Plus(et(l), et(r))
         case ExMinus(l,r) => Minus(et(l), et(r))
         case ExTimes(l,r) => Times(et(l), et(r))
-        case ExDiv(l,r) => Div(et(l), et(r))
-        case ExModulo(l,r) => Modulo(et(l), et(r))
+        // case ExDiv(l,r) => Div(et(l), et(r))
+        // case ExModulo(l,r) => Modulo(et(l), et(r))
         case ExNeg(t) => Neg(et(t))
         case _ => {
           reporter.error(t.pos, "invalid term in synthesis predicate")
@@ -110,6 +131,45 @@ trait ChooseTransformer
 
       try {
         Some(ef(tree))
+      } catch {
+        case EscapeException() => None
+      }
+    }
+
+    // tries to convert a formula to Mikael's format. Returns None if one of
+    // the predicates contains a non-linear term.
+    def formulaToPAFormula(formula: Formula, inVarSet: Set[String]): Option[PASynthesis.PAFormula] = {
+      case class EscapeException() extends Exception
+
+      def f2paf(f: Formula): PASynthesis.PAFormula = f match {
+        case And(fs) => PASynthesis.PAConjunction(fs.map(f2paf(_)))
+        case Or(fs) => PASynthesis.PADisjunction(fs.map(f2paf(_)))
+        case True() => PASynthesis.PATrue()
+        case False() => PASynthesis.PAFalse()
+        case Equals(term, IntLit(0)) => PASynthesis.PAEqualZero(makePACombination(term))
+        case GreaterEqThan(term, IntLit(0)) => PASynthesis.PAGreaterEqZero(makePACombination(term))
+        case _ => scala.Predef.error("Unexpected formula in format conversion: " + f)
+      }
+
+      def makePACombination(term: Term): PASynthesis.PACombination = term match {
+        case LinearCombination(cstTerm, cstList) => {
+          var inVarsAff:  List[(Int,PASynthesis.InputVar)] = Nil
+          var outVarsAff: List[(Int,PASynthesis.OutputVar)] = Nil
+
+          for((nme,coef) <- cstList) {
+            if(inVarSet(nme))
+              inVarsAff = (coef,PASynthesis.InputVar(nme)) :: inVarsAff
+            else
+              outVarsAff = (coef,PASynthesis.OutputVar(nme)) :: outVarsAff
+          }
+
+          PASynthesis.PACombination(cstTerm, inVarsAff.reverse, outVarsAff.reverse)
+        }
+        case _ => throw EscapeException()
+      }
+
+      try {
+        Some(f2paf(formula))
       } catch {
         case EscapeException() => None
       }
