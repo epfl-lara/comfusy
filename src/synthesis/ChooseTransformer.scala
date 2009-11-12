@@ -13,7 +13,6 @@ trait ChooseTransformer
   import global._
 
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
-
   private lazy val unsatConstraintsException: Symbol = definitions.getClass("synthesis.Definitions.UnsatisfiableConstraint")
 
   /** The actual rewriting function is the following. */
@@ -74,6 +73,8 @@ trait ChooseTransformer
 
           println("Precondition         : " + paPrec)
           println("Program              : " + paProg)
+
+          println("MCode                : " + MCode.progToMCode(paPrec,paProg))
           
           // CODE GENERATION
           // we prepare a fresh variable symbol for each output var.
