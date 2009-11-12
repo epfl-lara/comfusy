@@ -43,7 +43,7 @@ trait ChooseTransformer
             return a
 
           // for the record
-          val inputVariableSet: Set[String] = Set.empty ++ funValDefs.map(_.name.toString)
+          val outputVariableSet: Set[String] = Set.empty ++ funValDefs.map(_.name.toString)
 
           // EXTRACTION
           val extractedFormula: Formula = extractFormula(funBody) match {
@@ -59,7 +59,7 @@ trait ChooseTransformer
           println("Corresponding formula: " + extractedFormula)
 
           // LINEARIZATION
-          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, inputVariableSet) match {
+          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, outputVariableSet) match {
             case Some(f) => f
             case None => {
               reporter.error(funBody.pos, "predicate is not in linear arithmetic")
@@ -71,6 +71,13 @@ trait ChooseTransformer
             return a
 
           println("Mikael-Style formula : " + paStyleFormula)
+
+          val outputVars: List[PASynthesis.OutputVar] = outputVariableSet.toList.map(PASynthesis.OutputVar(_))
+          println("ze output vars " + outputVars)
+          val (paPrec,paProg) = PASynthesis.solve(outputVars, paStyleFormula)
+
+          println("Precondition         : " + paPrec)
+          println("Program              : " + paProg)
           
           // CODE GENERATION
           // currently, generates a tuple of the right size containing only zeroes :)
@@ -116,7 +123,7 @@ trait ChooseTransformer
 
       def et(t: Tree): Term = t match {
         case ExIntLiteral(value) => IntLit(value)
-        case ExIntIdentifier(id) => Variable("'"+id.toString+"'")
+        case ExIntIdentifier(id) => Variable(id.toString) //Variable("'"+id.toString+"'")
         case ExPlus(l,r) => Plus(et(l), et(r))
         case ExMinus(l,r) => Minus(et(l), et(r))
         case ExTimes(l,r) => Times(et(l), et(r))
@@ -138,7 +145,7 @@ trait ChooseTransformer
 
     // tries to convert a formula to Mikael's format. Returns None if one of
     // the predicates contains a non-linear term.
-    def formulaToPAFormula(formula: Formula, inVarSet: Set[String]): Option[PASynthesis.PAFormula] = {
+    def formulaToPAFormula(formula: Formula, outVarSet: Set[String]): Option[PASynthesis.PAFormula] = {
       case class EscapeException() extends Exception
 
       def f2paf(f: Formula): PASynthesis.PAFormula = f match {
@@ -156,12 +163,18 @@ trait ChooseTransformer
           var inVarsAff:  List[(Int,PASynthesis.InputVar)] = Nil
           var outVarsAff: List[(Int,PASynthesis.OutputVar)] = Nil
 
+          println(outVarSet)
           for((nme,coef) <- cstList) {
-            if(inVarSet(nme))
-              inVarsAff = (coef,PASynthesis.InputVar(nme)) :: inVarsAff
-            else
+            if(outVarSet.contains(nme)) {
+              println(nme + " is an output var")
               outVarsAff = (coef,PASynthesis.OutputVar(nme)) :: outVarsAff
+}
+            else
+{
+              println(nme + " is an input var")
+              inVarsAff = (coef,PASynthesis.InputVar(nme)) :: inVarsAff
           }
+}
 
           PASynthesis.PACombination(cstTerm, inVarsAff.reverse, outVarsAff.reverse)
         }
