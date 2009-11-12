@@ -14,9 +14,7 @@ trait ChooseTransformer
 
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
 
-  private def isChooseFunction(symbol: Symbol): Boolean = {
-    symbol == synthesisDefinitionsModule.tpe.decl("choose")
-  }
+  private lazy val unsatConstraintsException: Symbol = definitions.getClass("synthesis.Definitions.UnsatisfiableConstraint")
 
   /** The actual rewriting function is the following. */
   def transformChooseCalls(unit: CompilationUnit): Unit =
@@ -43,7 +41,7 @@ trait ChooseTransformer
             return a
 
           // for the record
-          val outputVariableSet: Set[String] = Set.empty ++ funValDefs.map(_.name.toString)
+          val outputVariableList = funValDefs.map(_.name.toString)
 
           // EXTRACTION
           val extractedFormula: Formula = extractFormula(funBody) match {
@@ -59,7 +57,7 @@ trait ChooseTransformer
           println("Corresponding formula: " + extractedFormula)
 
           // LINEARIZATION
-          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, outputVariableSet) match {
+          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
             case Some(f) => f
             case None => {
               reporter.error(funBody.pos, "predicate is not in linear arithmetic")
@@ -72,28 +70,36 @@ trait ChooseTransformer
 
           println("Mikael-Style formula : " + paStyleFormula)
 
-          val outputVars: List[PASynthesis.OutputVar] = outputVariableSet.toList.map(PASynthesis.OutputVar(_))
-          println("ze output vars " + outputVars)
-          val (paPrec,paProg) = PASynthesis.solve(outputVars, paStyleFormula)
+          val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
 
           println("Precondition         : " + paPrec)
           println("Program              : " + paProg)
           
           // CODE GENERATION
-          // currently, generates a tuple of the right size containing only zeroes :)
-          if(funValDefs.length == 1) {
-            // special case for only one var:
-            typer.typed(atOwner(currentOwner) {
-              Literal(0)
-            })
-          } else {
-            // all other cases.
-            typer.typed(atOwner(currentOwner) {
-              Block(List(Literal(42)), 
-              New(TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
-                List(funValDefs.map(x => Literal(0)))))
-            })
-          }
+          // we prepare a fresh variable symbol for each output var.
+          val outputVariableSymbols: List[Symbol] = funValDefs.map(fvd => {
+            currentOwner.newValue(fvd.pos, unit.fresh.newName(fvd.pos, "out")).setInfo(definitions.IntClass.tpe)
+          })
+
+          // STARTING TO PUT THE CODE TOGETHER HERE !
+          // Throw(New(Ident(unsatConstraintsException), List(Nil))) 
+          typer.typed(atOwner(currentOwner) {
+            Block(
+              outputVariableSymbols.map(ovs => {
+                ValDef(ovs, Literal(42))
+              })
+              //:: Nil
+              ,
+              if(outputVariableSymbols.length == 1) {
+                Ident(outputVariableSymbols(0))
+              } else {
+                New(
+                  TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
+                  List(outputVariableSymbols.map(ovs => Ident(ovs)))
+                )
+              }
+            )
+          })
         }
         case _ => super.transform(tree)
       }
@@ -163,20 +169,17 @@ trait ChooseTransformer
           var inVarsAff:  List[(Int,PASynthesis.InputVar)] = Nil
           var outVarsAff: List[(Int,PASynthesis.OutputVar)] = Nil
 
-          println(outVarSet)
           for((nme,coef) <- cstList) {
             if(outVarSet.contains(nme)) {
-              println(nme + " is an output var")
               outVarsAff = (coef,PASynthesis.OutputVar(nme)) :: outVarsAff
 }
             else
 {
-              println(nme + " is an input var")
               inVarsAff = (coef,PASynthesis.InputVar(nme)) :: inVarsAff
           }
 }
 
-          PASynthesis.PACombination(cstTerm, inVarsAff.reverse, outVarsAff.reverse)
+          PASynthesis.PACombination(cstTerm, inVarsAff.reverse.removeDuplicates, outVarsAff.reverse.removeDuplicates)
         }
         case _ => throw EscapeException()
       }

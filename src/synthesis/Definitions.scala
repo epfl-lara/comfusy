@@ -2,6 +2,8 @@ package synthesis
 
 /** All definitions which are meant to be used ``as the library''.  */
 object Definitions {
+  case class UnsatisfiableConstraint() extends Exception("The constraints cannot be satisfied.")
+
   def choose[A1](predicate: A1 => Boolean) : A1 = {
     error("``choose'' was not rewritten by the synthesis plugin")
   }

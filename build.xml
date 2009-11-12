@@ -20,6 +20,7 @@
     <!-- other properties -->
     <property name="dist.jar" value="${dist.dir}/synthesis-plugin.jar" />
     <property name="scalac.script.file" value="${base.dir}/scalac-synthesis" />
+    <property name="scala.script.file" value="${base.dir}/scala-synthesis" />
     <property name="scalac.default.params" value="-deprecation -unchecked" />
     <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/> 
 
@@ -70,6 +71,8 @@
 
         <echo file="${scalac.script.file}" message="#!/bin/sh${line.separator}scalac -Xplugin:${dist.jar} -classpath ${dist.jar} $@${line.separator}" />
         <chmod file="${scalac.script.file}" perm="u+x" />
+        <echo file="${scala.script.file}" message="#!/bin/sh${line.separator}scala -classpath .:${dist.jar} $@${line.separator}" />
+        <chmod file="${scala.script.file}" perm="u+x" />
     </target>
 
     <target name="clean" description="cleans up">
