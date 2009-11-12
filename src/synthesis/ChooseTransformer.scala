@@ -41,7 +41,7 @@ trait ChooseTransformer
 
           // EXTRACTIONS
           val extractedFormula: Formula = extractFormula(funBody) match {
-            case Some(f) => f
+            case Some(f) => NNF(f)
             case None => {
               foundErrors = true
               False() // arbitrary, but hey.
@@ -78,8 +78,8 @@ trait ChooseTransformer
       def ef(t: Tree): Formula = t match {
         case ExTrueLiteral() => True()
         case ExFalseLiteral() => False()
-        case ExAnd(l,r) => And(List(ef(l), ef(r)))
-        case ExOr(l,r) => Or(List(ef(l), ef(r)))
+        case ExAnd(l,r) => And(ef(l), ef(r))
+        case ExOr(l,r) => Or(ef(l), ef(r))
         case ExNot(f) => Not(ef(f))
         case ExEquals(l,r) => Equals(et(l), et(r))
         case ExNotEquals(l,r) => NotEquals(et(l), et(r))
