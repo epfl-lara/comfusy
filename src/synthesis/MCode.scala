@@ -2,7 +2,9 @@ package synthesis
 
 /** Minimal Scala code structure to be used as an intermediate
  * representation between PASynthesis.PAProgram and scalac trees. */
-object MCode {
+trait {
+  self: ChooseTransformer =>
+  import global._
   import PASynthesis._
 
   sealed abstract class MStatement
@@ -20,5 +22,24 @@ object MCode {
       ::: List(MReturn(prog.output_variables.map(_.name)))
     )
 
+  }
+
+  def termToCode(term: PATerm): Tree = term match {
+    case PADivision(num, den) => error("XXX") // Literal(Constant(den)) 
+    case PAIfThenElse(cond, then, elze) => error("X") // equationToCode 
+    case PAMinimum(terms)
+    case PAMaximum(terms)
+    case PACombination(cst, inAff, outAff)
+
+
+  }
+
+  def equationToCode(eq: PAEquation): Tree = {
+    PADivides
+    PAEqualZero
+    PAGreaterZero
+    PAGreaterEqZero
+    PATrue
+    PAFalse
   }
 }

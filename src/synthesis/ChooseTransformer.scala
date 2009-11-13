@@ -8,7 +8,8 @@ import scala.tools.nsc.transform.TypingTransformers
 
 trait ChooseTransformer
   extends TypingTransformers
-  with ArithmeticExtractors {
+  with ArithmeticExtractors
+  with MCode {
   self: MainComponent =>
   import global._
 
@@ -74,7 +75,7 @@ trait ChooseTransformer
           println("Precondition         : " + paPrec)
           println("Program              : " + paProg)
 
-          println("MCode                : " + MCode.progToMCode(paPrec,paProg))
+          println("MCode                : " + progToMCode(paPrec,paProg))
           
           // CODE GENERATION
           // we prepare a fresh variable symbol for each output var.
