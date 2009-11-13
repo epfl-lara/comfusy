@@ -809,7 +809,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
     }
   }
   /// Returns the remaining non_equalities (non_equalities should not contain equalities, nor will the returned term do)
-  def solveEqualities(equalities : List[PAEqualZero], non_equalities : List[PAEquation], solve_first_equality_in_priority : Boolean): List[PAEquation] = {
+  def solveEqualities(equalities : List[PAEqualZero], non_equalities : List[PAEquation]): List[PAEquation] = {
     /// Make sure all equalities have at least one output variable, else remove them.
     val (interesting_equalities, precondition_equalities) = equalities partition (_.has_output_variables)
     addPrecondition(PAConjunction(precondition_equalities))
@@ -842,7 +842,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
             val new_non_equalities = non_equalities map (_.replace(y, new_assignment))
             delOutputVar(y)
             // by "false", we mean that the next equality to be solve can be taken arbitrarily
-            solveEqualities(new_equalities, blown_equalities ++ new_non_equalities, false)
+            solveEqualities(new_equalities, blown_equalities ++ new_non_equalities)
           case None => 
             // At least we know that eq1 has a smallest coefficient.
             val o1_coefs = o1 map (_._1)
@@ -868,7 +868,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
                     new_nonequalities = blown_eqs ++ (new_nonequalities map (_.replace(v, pac)))
                     delOutputVar(v)
                 }
-                solveEqualities(new_equalities, new_nonequalities, false)
+                solveEqualities(new_equalities, new_nonequalities)
 
               case n => // n > 1
                 /// Introduce a new input variable.
@@ -876,8 +876,8 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
                 addPrecondition(PADivides(n, PACombination(c1, i1, Nil)))
                 addInputAssignment(x, PADivision(PACombination(c1, i1, Nil), n))
                 PAEqualZero(PACombination(0, (n, x)::Nil, o1)).simplified match { // Should divide by n, as it was the gcd of all other variables.
-                  case new_eq@PAEqualZero(_) => solveEqualities(new_eq::rest_equalities, non_equalities, solve_first_equality_in_priority)
-                  case _ => solveEqualities(rest_equalities, non_equalities, solve_first_equality_in_priority) // Should NOT happen as there is at least one variable in PAEqualZero so it cannot be jugded as something else.
+                  case new_eq@PAEqualZero(_) => solveEqualities(new_eq::rest_equalities, non_equalities)
+                  case _ => solveEqualities(rest_equalities, non_equalities) // Should NOT happen as there is at least one variable in PAEqualZero so it cannot be jugded as something else.
                 }
             }
         }
@@ -999,7 +999,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
     /// Solve them, so now we only have non-equalities
     /// The simplification of inequalities can generate new equalities, so we handle them.
     def solveEquations(equalities:List[PAEqualZero], non_equalities:List[PAEquation]):Option[PACaseSplit] = {
-      val non_equalities2 = solveEqualities(equalities, non_equalities, false)
+      val non_equalities2 = solveEqualities(equalities, non_equalities)
       /// Get only inequalities, plus maybe with "False" in other
       val (equalities2, inequalities, is_consistent) = partitionPAGreaterEqZero(non_equalities2)
       // equalities2 should be empty given that new_non_equalities cannot contain equalities
