@@ -822,13 +822,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
         min_coefs_o1 < min_coefs_o2
     }
     
-    val sorted_equalities = if(solve_first_equality_in_priority) {
-      interesting_equalities
-    } else {
-      interesting_equalities sort by_least_outputvar_coef
-    }
-    
-    sorted_equalities match {
+    interesting_equalities match {
       case Nil => non_equalities
       case (eq1@PAEqualZero(PACombination(c1, i1, o1)))::rest_equalities =>
         // Looking for a coefficient 1 or -1 in front of outputvars in the first equality.

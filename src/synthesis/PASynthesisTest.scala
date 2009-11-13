@@ -107,9 +107,10 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val pac3 = ((-b)-(x*5)) + z*8 === 0
       val solution = PASynthesis.solve("constrained2", pac1, pac2, pac3)
       println(solution._2)
-      solution._1 should equal (PACondition((x0,PADivision(PACombination(0,(-1,b)::(-10,c)::Nil,Nil),3))::Nil,
-                                            PAConjunction(PADivides(14,PACombination(0,List((1,b), (20,c), (-45,x0)),Nil))::
-                                                          PADivides(3,PACombination(0,List((-1,b), (-10,c)),Nil))::Nil)))
+      solution._1 should equal (PACondition((x0,PADivision(PACombination(0,(41,b)::(2,c)::Nil,Nil),7))::Nil,
+                                            PAConjunction(
+                                                          PADivides(42,PACombination(0,List((1,b), (-3,x0)),Nil))::
+      PADivides(7,PACombination(0,List((41,b), (2,c)),Nil))::Nil)))
     }
     it("should solve overconstrained equations") {
       val x0 = InputVar("x0")
