@@ -845,26 +845,31 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
             solveEqualities(new_equalities, blown_equalities ++ new_non_equalities, false)
           case None => 
             // At least we know that eq1 has a smallest coefficient.
-            Common.gcdlist(o1 map (_._1)) match {
+            val o1_coefs = o1 map (_._1)
+            val o1_vars = o1 map (_._2)
+            Common.gcdlist(o1_coefs) match {
               case 1 => 
-                // Take the least coefficient and apply the modulo transformation
-                val t_least@(c_least, v_least) = o1 reduceLeft {(t1, t2) => if(Math.abs(t1._1) < Math.abs(t2._1)) t1 else t2 }
-                val M = Math.abs(c_least) + 1
-                val y = getNewOutputVar()
-                
-                val v_least_assignment = if(Common.smod(c_least,M) == 1) {
-                  ((PACombination(c1, i1, o1 - (t_least)) %% M) - (M, y))*(-1)
-                } else {
-                  ((PACombination(c1, i1, o1 - (t_least)) %% M) - (M, y)).simplified
+                // We find a solution to o1_coefs.o1_vars - 1 = 0
+                // Then we know that by multiplying the first line by coef+i1_coef.i1.vars, we obtain the general solution
+                val pa_input = PACombination(c1, i1, Nil)
+                val solution_for_minus1 = Common.bezoutWithBase(-1, o1_coefs)
+                val first_line:List[PACombination] = solution_for_minus1.head map (pa_input * _)
+                // From this solution, we introduce |o1| - 1 new variables to solve the equality and remove the equation.
+                val new_assignments = solution_for_minus1.tail.foldLeft(first_line) { case (assignments, line) =>
+                    val y = getNewOutputVar()
+                    (assignments zip line) map { case (expr, coef) => expr + (y*coef)}
                 }
-                addOutputAssignment(v_least, v_least_assignment)
-                delOutputVar(v_least)
+                var new_equalities = rest_equalities
+                var new_nonequalities = non_equalities
+                (o1_vars zip new_assignments) foreach {
+                  case (v, pac) => addOutputAssignment(v, pac)
+                    val (new_eqs, blown_eqs) = partitionPAEqualZero(new_equalities map (_.replace(v, pac)))
+                    new_equalities = new_eqs
+                    new_nonequalities = blown_eqs ++ (new_nonequalities map (_.replace(v, pac)))
+                    delOutputVar(v)
+                }
+                solveEqualities(new_equalities, new_nonequalities, false)
 
-                //We inject this assignment to all other equations, removing the previous equality.
-                val (new_equalities, blown_equalities) = partitionPAEqualZero((eq1::rest_equalities) map (_.replace(v_least, v_least_assignment)))
-                val new_non_equalities = non_equalities map (_.replace(v_least, v_least_assignment))
-                // by "true", we force the solver to finish the first equality.
-                solveEqualities(new_equalities, blown_equalities ++ new_non_equalities, true)
               case n => // n > 1
                 /// Introduce a new input variable.
                 val x = getNewInputVar()

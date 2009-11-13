@@ -102,14 +102,14 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       println(solution._2)
     }
     it("should solve normally constrained equations 2") {
-      val pac1 = b + x*10 + y*14 + z*35
-      val pac2 = c*2 -x*3 +z*35
-      val pac3 = ((-b)-(x*5)) + z*8
-      val solution = PASynthesis.solve(PAEqualZero(pac1)::PAEqualZero(pac2)::PAEqualZero(pac3)::Nil)
-      solution._1 should equal (PACondition((x0,PADivision(PACombination(0,(1,b)::(-145,c)::Nil,Nil),7))::Nil,
-                                            PAConjunction(PADivides(302,PACombination(0,List((-1,b), (47,c), (151,x0)),Nil))::
-                                                          PADivides(7,PACombination(0,List((1,b), (-145,c)),Nil))::Nil)))
+      val pac1 = b + x*10 + y*14 + z*35 === 0
+      val pac2 = c*2 -x*3 +z*35 === 0
+      val pac3 = ((-b)-(x*5)) + z*8 === 0
+      val solution = PASynthesis.solve("constrained2", pac1, pac2, pac3)
       println(solution._2)
+      solution._1 should equal (PACondition((x0,PADivision(PACombination(0,(-1,b)::(-10,c)::Nil,Nil),3))::Nil,
+                                            PAConjunction(PADivides(14,PACombination(0,List((1,b), (20,c), (-45,x0)),Nil))::
+                                                          PADivides(3,PACombination(0,List((-1,b), (-10,c)),Nil))::Nil)))
     }
     it("should solve overconstrained equations") {
       val x0 = InputVar("x0")
@@ -134,7 +134,31 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve(eq1::eq1::eq1::eq1::eq1::Nil)
       solution._1.global_condition should equal (PATrue())
       solution._2.output_assignment should equal ((x, PACombination(b))::Nil)                                                 
-      // TODO: how to detect that this is not satisfiable ?
+      // TODO: test the obtained solution ?
+    }
+    it("should solve the advanced bezout problem") {
+      val eq1 = b + x*10 + y*15 + z*6 === 2
+      val solution = PASynthesis.solve("finding_bezout1", eq1)
+      solution._1.global_condition should equal (PATrue())
+      println(solution._2)
+      //solution._2.output_assignment should equal ((x, PACombination(b))::Nil)                                                 
+      // TODO: test the obtained solution ?
+    }
+    it("should solve the advanced bezout problem with precondition") {
+      val eq1 = b + x*9 + y*15 + z*6 === 2
+      val solution = PASynthesis.solve("finding_bezout2", eq1)
+      solution._1.global_condition should equal (PADivides(3, b+(-2)))
+      println(solution._2)                                            
+      // TODO: test the obtained solution ?
+    }
+    it("should solve the advanced bezout problem with more postconditions") {
+      val eq1 = b + x*10 + y*15 + z*6 === 0
+      val eq2 = x > 5
+      val eq3 = y < 18
+      val solution = PASynthesis.solve("finding_bezout3", eq1, eq2, eq3)
+      solution._1.global_condition should equal (PATrue())
+      println(solution._2)                                           
+      // TODO: test the obtained solution ?
     }
     it("should merge inequations to get equations") {
       val pac1 = c+x-b >= 0
@@ -143,7 +167,7 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       solution._1.global_condition should equal (PATrue())
       solution._2.output_assignment should equal ((x, PACombination(b)-PACombination(c))::Nil)
     }
-    it("should detect colliding equations and return false") {
+    it("should detect colliding inequations and return false") {
       val pac1 = c+x-b >= 1
       val pac2 = c+x-b <= 0
       val solution = PASynthesis.solve("colliding_equations", pac1, pac2)
