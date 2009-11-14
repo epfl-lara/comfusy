@@ -14,7 +14,6 @@ trait ChooseTransformer
   import global._
 
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
-  private lazy val unsatConstraintsException: Symbol = definitions.getClass("synthesis.Definitions.UnsatisfiableConstraint")
 
   /** The actual rewriting function is the following. */
   def transformChooseCalls(unit: CompilationUnit): Unit =
