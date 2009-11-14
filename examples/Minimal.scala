@@ -2,9 +2,12 @@ import synthesis.Definitions._
 
 object Minimal {
   def main(args: Array[String]): Unit = {
-    val y: Int = 4
-    val z = 5
-    val x = choose((x: Int) => (5*(x-y) <= 2 && x > 4))
+    val x = 14
+    val y = 16
+    val z = choose((z:Int) => z > x && z < y)
     println(x)
+    println(y)
+
+
   }
 }

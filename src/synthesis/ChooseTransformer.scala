@@ -9,7 +9,7 @@ import scala.tools.nsc.transform.TypingTransformers
 trait ChooseTransformer
   extends TypingTransformers
   with ArithmeticExtractors
-  with MCode {
+  with CodeGeneration {
   self: MainComponent =>
   import global._
 
@@ -44,17 +44,19 @@ trait ChooseTransformer
           val outputVariableList = funValDefs.map(_.name.toString)
 
           // EXTRACTION
-          val extractedFormula: Formula = extractFormula(funBody) match {
-            case Some(f) => normalized(f)
+          val (extractedFormula,extractedSymbols) =
+           extractFormula(funBody) match {
+            case Some((f,s)) => (normalized(f), s.filter((sym: Symbol) => !outputVariableList.contains(sym.name.toString)))
             case None => {
               foundErrors = true
-              False() // arbitrary, but hey.
+              (False(),Set.empty[Symbol])
             }
           }
           if (foundErrors)
             return a
 
           println("Corresponding formula: " + extractedFormula)
+          println("Symbols in there     : " + extractedSymbols)
 
           // LINEARIZATION
           val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
@@ -74,33 +76,16 @@ trait ChooseTransformer
 
           println("Precondition         : " + paPrec)
           println("Program              : " + paProg)
-
-          println("MCode                : " + progToMCode(paPrec,paProg))
           
           // CODE GENERATION
-          // we prepare a fresh variable symbol for each output var.
-          val outputVariableSymbols: List[Symbol] = funValDefs.map(fvd => {
-            currentOwner.newValue(fvd.pos, unit.fresh.newName(fvd.pos, "out")).setInfo(definitions.IntClass.tpe)
-          })
-
-          // STARTING TO PUT THE CODE TOGETHER HERE !
           // Throw(New(Ident(unsatConstraintsException), List(Nil))) 
+          var initialMap: SymbolMap = Map.empty
+          extractedSymbols.foreach(sym => {
+            initialMap = initialMap + (sym.name.toString -> sym)
+          })
+          val codeGen = new CodeGenerator(unit, currentOwner, initialMap)
           typer.typed(atOwner(currentOwner) {
-            Block(
-              outputVariableSymbols.map(ovs => {
-                ValDef(ovs, Literal(42))
-              })
-              //:: Nil
-              ,
-              if(outputVariableSymbols.length == 1) {
-                Ident(outputVariableSymbols(0))
-              } else {
-                New(
-                  TypeTree(definitions.tupleType(funValDefs.map(x => definitions.IntClass.tpe))),
-                  List(outputVariableSymbols.map(ovs => Ident(ovs)))
-                )
-              }
-            )
+            codeGen.programToCode(paPrec, paProg) 
           })
         }
         case _ => super.transform(tree)
@@ -108,7 +93,8 @@ trait ChooseTransformer
     }
 
     // tries to extract an arithmetic formula from the code.
-    def extractFormula(tree: Tree): Option[Formula] = {
+    def extractFormula(tree: Tree): Option[(Formula,Set[Symbol])] = {
+      var extractedSymbols: Set[Symbol] = Set.empty
       case class EscapeException() extends Exception
 
       def ef(t: Tree): Formula = t match {
@@ -131,7 +117,10 @@ trait ChooseTransformer
 
       def et(t: Tree): Term = t match {
         case ExIntLiteral(value) => IntLit(value)
-        case ExIntIdentifier(id) => Variable(id.toString) //Variable("'"+id.toString+"'")
+        case ExIntIdentifier(id) => {
+          extractedSymbols = extractedSymbols + id.symbol
+          Variable(id.toString)
+        }
         case ExPlus(l,r) => Plus(et(l), et(r))
         case ExMinus(l,r) => Minus(et(l), et(r))
         case ExTimes(l,r) => Times(et(l), et(r))
@@ -145,7 +134,8 @@ trait ChooseTransformer
       }
 
       try {
-        Some(ef(tree))
+        val res = ef(tree)
+        Some((res,extractedSymbols))
       } catch {
         case EscapeException() => None
       }

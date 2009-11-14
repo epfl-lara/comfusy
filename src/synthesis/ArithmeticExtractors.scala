@@ -6,6 +6,8 @@ trait ArithmeticExtractors {
   import global._
   import global.definitions._
 
+  import scala.collection.mutable.Set
+
   object ExTrueLiteral {
     def unapply(tree: Tree): Boolean = tree match {
       case Literal(Constant(true)) => true
