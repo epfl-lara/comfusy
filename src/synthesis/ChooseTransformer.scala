@@ -25,7 +25,7 @@ trait ChooseTransformer
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
           // SANITY CHECKS
           var foundErrors = false
-          reporter.info(a.pos, "here!", true) 
+          // DEBUG reporter.info(a.pos, "here!", true) 
           val Function(funValDefs, funBody) = predicate
 
           // we check that we're only synthesizing integers, and collect the
@@ -54,8 +54,8 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          println("Corresponding formula: " + extractedFormula)
-          println("Symbols in there     : " + extractedSymbols)
+          // DEBUG println("Corresponding formula: " + extractedFormula)
+          // DEBUG println("Symbols in there     : " + extractedSymbols)
 
           // LINEARIZATION
           val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
@@ -69,12 +69,12 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          println("Mikael-Style formula : " + paStyleFormula)
+          // DEBUG println("Mikael-Style formula : " + paStyleFormula)
 
           val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
 
-          println("Precondition         : " + paPrec)
-          println("Program              : " + paProg)
+          // DEBUG println("Precondition         : " + paPrec)
+          // DEBUG println("Program              : " + paProg)
           
           // CODE GENERATION
           // Throw(New(Ident(unsatConstraintsException), List(Nil))) 
