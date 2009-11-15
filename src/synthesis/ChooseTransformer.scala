@@ -54,8 +54,8 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          // DEBUG println("Corresponding formula: " + extractedFormula)
-          // DEBUG println("Symbols in there     : " + extractedSymbols)
+          println("Corresponding formula: " + extractedFormula)
+          println("Symbols in there     : " + extractedSymbols)
 
           // LINEARIZATION
           val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
@@ -69,12 +69,12 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          // DEBUG println("Mikael-Style formula : " + paStyleFormula)
+          println("Mikael-Style formula : " + paStyleFormula)
 
           val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
 
-          // DEBUG println("Precondition         : " + paPrec)
-          // DEBUG println("Program              : " + paProg)
+          println("Precondition         : " + paPrec)
+          println("Program              : " + paProg)
           
           // CODE GENERATION
           // Throw(New(Ident(unsatConstraintsException), List(Nil))) 

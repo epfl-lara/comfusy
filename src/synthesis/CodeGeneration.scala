@@ -66,7 +66,29 @@ trait CodeGeneration {
     }
   
     def termToCode(map: SymbolMap, term: PATerm): Tree = term match {
-      case PADivision(num, den) => Apply(Select(termToCode(map,num), nme.DIV), List(Literal(Constant(den))))
+      case PADivision(num, den) => {
+        // num / den 
+        // Apply(Select(termToCode(map,num), nme.DIV), List(Literal(Constant(den))))
+        // (num - ((den + num%den) % den)) / den
+        val numTree = termToCode(map, num)
+        val denTree = Literal(Constant(den))
+        Apply(
+          Select(
+            Apply(
+              Select(
+                numTree,
+                nme.SUB),
+              List(
+                Apply(
+                  Select(
+                    Apply(Select(denTree, nme.ADD), List(Apply(Select(numTree,nme.MOD), List(denTree)))),
+                    nme.MOD),
+                  List(denTree))
+                )),
+            nme.DIV),
+          List(denTree)
+        )
+      }
       case PAIfThenElse(cond, then, elze) => scala.Predef.error("X") // equationToCode 
       case PAMinimum(terms) => {
         def binaryMin(t1:Tree,t2:Tree): Tree = {
@@ -83,8 +105,6 @@ trait CodeGeneration {
       }
       case PACombination(cst, inAff, outAff) => (inAff,outAff) match {
         case (Nil,Nil) => Literal(Constant(cst))
-        //case ((1,iv)::Nil,Nil) if cst == 0 => variable(map,iv.name)
-        //case (Nil,(1,ov)::Nil) if cst == 0 => variable(map,ov.name)
         case _ => {
           val factorList: List[(Int,String)] = inAff.map(ia => (ia._1,ia._2.name)) ::: outAff.map(oa => (oa._1,oa._2.name))
           val prodList: List[Tree] = factorList.map(isp => {
