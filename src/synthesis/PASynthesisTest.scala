@@ -90,27 +90,33 @@ class PASynthesisTest extends Spec with ShouldMatchers {
     it("should solve underconstrained equations") {
       val pac = b + x*10 + y*14 + z*35 === 0
       val solution = PASynthesis.solve("underconstrained", pac)
-      solution._1 should equal (PACondition(Nil, PATrue()))
       println(solution._2)
+      solution._1 should equal (PACondition(Nil, PATrue()))
     }
     it("should solve normally constrained equations 1") {
       val pac1 = b + x*2 ===0
       val solution = PASynthesis.solve("constrained1", pac1)
+      println(solution._2)
       solution._1 should equal (PACondition(Nil, PADivides(2, b)))
       solution._2.input_assignment should equal ((x0, PADivision(b, 2))::Nil)
       solution._2.output_assignment should equal ((x, -x0)::Nil)
-      println(solution._2)
     }
     it("should solve normally constrained equations 2") {
-      val pac1 = b + x*10 + y*14 + z*35 === 0
-      val pac2 = c*2 -x*3 +z*35 === 0
-      val pac3 = ((-b)-(x*5)) + z*8 === 0
+      val pac1 = b  + x*10 + y*14 + z*35 === 0
+      val pac2 = c*2 -x*3  +        z*35 === 0
+      val pac3 = -b - x*5  +        z*8  === 0
       val solution = PASynthesis.solve("constrained2", pac1, pac2, pac3)
       println(solution._2)
-      solution._1 should equal (PACondition((x0,PADivision(PACombination(0,(41,b)::(2,c)::Nil,Nil),7))::Nil,
-                                            PAConjunction(
-                                                          PADivides(42,PACombination(0,List((1,b), (-3,x0)),Nil))::
-      PADivides(7,PACombination(0,List((41,b), (2,c)),Nil))::Nil)))
+      solution._1.execute(Map[InputVar, Int]() + (b -> 89) + (c -> 1891)) should be (true)
+      solution._1.execute(Map[InputVar, Int]() + (b -> 89) + (c -> 1892)) should be (false)
+      solution._1.execute(Map[InputVar, Int]() + (b -> 90) + (c -> 1891)) should be (false)
+      val vb = 89
+      val vc = 1891
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb)+ (c -> vc))
+      val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
+      (vb  + vx*10 + vy*14 + vz*35) should equal (0)
+      (vc*2 -vx*3  +        vz*35) should equal (0)
+      (-vb - vx*5  +        vz*8) should equal (0)
     }
     it("should solve overconstrained equations") {
       val x0 = InputVar("x0")
@@ -134,23 +140,33 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val eq1 = b-x === 0
       val solution = PASynthesis.solve(eq1::eq1::eq1::eq1::eq1::Nil)
       solution._1.global_condition should equal (PATrue())
-      solution._2.output_assignment should equal ((x, PACombination(b))::Nil)                                                 
-      // TODO: test the obtained solution ?
+      solution._2.execute(Map[InputVar, Int]() + (b -> 5))(x) should equal (5)
     }
     it("should solve the advanced bezout problem") {
       val eq1 = b + x*10 + y*15 + z*6 === 2
       val solution = PASynthesis.solve("finding_bezout1", eq1)
       solution._1.global_condition should equal (PATrue())
       println(solution._2)
-      //solution._2.output_assignment should equal ((x, PACombination(b))::Nil)                                                 
-      // TODO: test the obtained solution ?
+      val vb = 7
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
+      val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
+      (vb + vx*10 + vy*15 + vz*6) should equal (2)
     }
     it("should solve the advanced bezout problem with precondition") {
       val eq1 = b + x*9 + y*15 + z*6 === 2
       val solution = PASynthesis.solve("finding_bezout2", eq1)
       solution._1.global_condition should equal (PADivides(3, b+(-2)))
-      println(solution._2)                                            
-      // TODO: test the obtained solution ?
+      println(solution._2)
+      
+      val vb1 = 8
+      val mapping1 = solution._2.execute(Map[InputVar, Int]() + (b -> vb1))
+      val (vx1, vy1, vz1) = (mapping1(x), mapping1(y), mapping1(z))
+      (vb1 + vx1*9 + vy1*15 + vz1*6) should equal (2)
+      
+      val vb2 = 7
+      val mapping2 = solution._2.execute(Map[InputVar, Int]() + (b -> vb2))
+      val (vx2, vy2, vz2) = (mapping2(x), mapping2(y), mapping2(z))
+      (vb2 + vx2*9 + vy2*15 + vz2*6) should not equal (2)
     }
     it("should solve the advanced bezout problem with more postconditions") {
       val eq1 = b + x*10 + y*15 + z*6 === 0
@@ -158,8 +174,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val eq3 = y < 18
       val solution = PASynthesis.solve("finding_bezout3", eq1, eq2, eq3)
       solution._1.global_condition should equal (PATrue())
-      println(solution._2)                                           
-      // TODO: test the obtained solution ?
+      val vb = 179
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
+      val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
+      (vb + vx*10 + vy*15 + vz*6) should equal (0)
+      (vx > 0) should be (true)
+      (vy < 18) should be (true)
     }
     it("should merge inequations to get equations") {
       val pac1 = c+x-b >= 0
@@ -179,7 +199,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val pac2 = (b-c)-y >= -1
       val solution = PASynthesis.solve("bounded_one_side", pac1, pac2)
       solution._1.global_condition should equal (PATrue())
-      solution._2.output_assignment should equal ((y, b+1-c)::(x, b-c)::Nil)
+      val vb = 179
+      val vc = 351
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb) + (c -> vc))
+      val (vx, vy) = (mapping(x), mapping(y))
+      (vc + vx - vb >= 0) should be (true)
+      (vb - vc - vy >= -1) should be (true)
     }
     it("should solve inequations when a variables are bounded on the right") {
       val pac1 = (b-c)-x >= 0
@@ -187,7 +212,14 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve("bounded_right", pac1, pac2)
       solution._1.global_condition should equal (PATrue())
       println(solution._2)
-      solution._2.output_assignment should equal ((x, PAMinimum((b+1-d)::(b-c)::Nil))::Nil)
+      
+      val vb = 179
+      val vc = 351
+      val vd = 243
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb) + (c -> vc) + (d -> vd))
+      val (vx) = (mapping(x))
+      ((vb-vc)-vx >= 0) should be (true)
+      ((vb+1-vd)-vx >= 0) should be (true)
     }
     it("should solve a simple inequation system") {
       val pac1 = c-x >= 0
@@ -195,17 +227,26 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve("simple_inequation", pac1, pac2)
       println(solution._2)
       solution._1.global_condition should equal ((c-b) >= 0)
-      solution._2.output_assignment should equal ((x, PACombination(c))::Nil)
+      val vb = 179
+      val vc = 351
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb) + (c -> vc))
+      val (vx) = (mapping(x))
+      (vc-vx >= 0) should be (true)
+      (vx-vb >= 0) should be (true)
     }
     it("should solve an inequation system with partial modulo ending") {
       val pac1 = (-c)-x+(y*3) === 0
       val pac2 = x*1 >= 0
       val pac3 = (-x)+2 >= 0
       val solution = PASynthesis.solve("modulo_ending", pac1, pac2, pac3)
-      println(solution._1)
+      solution._1.global_condition should equal (PATrue())
       println(solution._2)
-      //solution._1.global_condition should equal (PAGreaterEqZero(PACombination(c)-PACombination(b))::Nil)
-      //solution._2.output_assignment should equal ((x, PACombination(c))::Nil)
+      val vc = 351
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (c -> vc))
+      val (vx, vy) = (mapping(x), mapping(y))
+      ((-vc)-vx+(vy*3)) should equal (0)
+      (vx >= 0) should be (true)
+      ((-vx)+2 >= 0) should be (true)
     }
     it("should be able to produce if-then-else construct") {
       val pac1 = x >= 0
@@ -214,8 +255,19 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val pac4 = y-z >= 0
       val pac5 = ((y*3) - (z*2) + x) - b === 0
       val solution = PASynthesis.solve("find_if", pac1, pac2, pac3, pac4, pac5)
-      println(solution._1)
       println(solution._2)
+      solution._1.execute(Map[InputVar, Int]() + (b -> -3)) should be (false)
+
+      val vb = 7
+      solution._1.execute(Map[InputVar, Int]() + (b -> vb)) should be (true)
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
+      
+      val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
+      (vx >= 0) should be (true)
+      (vy-vx >= 0) should be (true)
+      (vz >= 0) should be (true)
+      (vy-vz >= 0) should be (true)
+      ((vy*3) - (vz*2) + vx) should equal (vb)
     }
     // FAILING !!
     /*it("should terminate on problems with big integers") {
@@ -238,14 +290,41 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val pac = (x >= 0) && ((x >= 1) || ((y+z) < 0)) && ((x < 1) || ((y-z) > 0))
       val solution = PASynthesis.solve(pac)
       solution._1.global_condition should be (PATrue())
-      println(solution._1)
-      println(solution._2)
+      val mapping = solution._2.execute(Map[InputVar, Int]())
+      val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
+      ((vx >= 0) && ((vx >= 1) || ((vy+vz) < 0)) && ((vx < 1) || ((vy-vz) > 0))) should be (true)
     }
     it("should solve the max problem") {
       val pac = (x >= b) && (x >= c) && (x >= d)  && ((x <= b) || (x <= c) || (x <= d))
       val solution = PASynthesis.solve(pac)
       println(solution._1)
       println(solution._2)
+      val vb = 7
+      val vc = 15
+      val vd = -9
+      solution._1.execute(Map[InputVar, Int]() + (b -> vb) + (c -> vc) + (d -> vd)) should be (true)
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb) + (c -> vc) + (d -> vd))
+      mapping(x) should equal (15)
+    }
+    it("should solve the hour-minut-second problem") {
+      val seconds = I("seconds")
+      val s = O("s")
+      val m = O("m")
+      val h = O("h")
+      val condition = (
+           seconds === s + (m * 60) + (h*3600)
+        && s >= 0 && s < 60
+        && m >= 0 && m < 60
+      )
+      val solution = PASynthesis.solve("getHourMinutSeconds", condition)
+      
+      val vseconds = -69
+      println(solution._2)
+      solution._1.execute(Map[InputVar, Int]() + (seconds -> vseconds)) should be (true)
+      val mapping = solution._2.execute(Map[InputVar, Int]() + (seconds -> vseconds))
+      mapping(s) should equal (51)
+      mapping(m) should equal (58)
+      mapping(h) should equal (-1)
     }
   }
 }

@@ -27,7 +27,7 @@ object Common {
             (a_indexed find {case a => Math.abs(a._2) == 1}) match {
               case Some((index, element)) => // This is easy, like solving 4x+y+45z=30, just say that y=30 and other are zero
                 val sign = if(element > 0) 1 else -1
-                (a_indexed map { case (i, c) => if(i==index) -e else 0 })
+                (a_indexed map { case (i, c) => if(i==index) -e/sign else 0 })
               case None =>
                     val (index, min_coef) = a_indexed reduceLeft {
                   (_, _) match {
@@ -39,9 +39,9 @@ object Common {
                 val a_assign = abs_min_coef_plus_1 :: (a map {case k => smod(k, abs_min_coef_plus_1)})
                 // the coefficient at index 'index+1' is now 1 or -1.
                 
-                val new_e = (e + min_coef * (smod(e, abs_min_coef_plus_1)))/abs_min_coef_plus_1
-                val new_a = min_coef::(a map {
-                  case k => (k + min_coef * (smod(k, abs_min_coef_plus_1)))/abs_min_coef_plus_1
+                val new_e = (e + Math.abs(min_coef) * (smod(e, abs_min_coef_plus_1)))/abs_min_coef_plus_1
+                val new_a = Math.abs(min_coef)::(a map {
+                  case k => (k + Math.abs(min_coef) * (smod(k, abs_min_coef_plus_1)))/abs_min_coef_plus_1
                 })
                 // the coefficient at index 'index+1' is now 0, so it will be removed.
                 
@@ -156,14 +156,15 @@ object Common {
                     case (t1@(i, ci), t2@(j, cj)) => if(Math.abs(ci) < Math.abs(cj)) t1 else t2
                   }}
                 val min_coef_sign = if(min_coef > 0) 1 else -1
+                val min_coef_sign2 = if(min_coef > 0) -1 else 1
                 val abs_min_coef_plus_1 = Math.abs(min_coef) + 1
                 val e_assign = smod(e, abs_min_coef_plus_1)
                 val a_assign = abs_min_coef_plus_1 :: (a map {case k => smod(k, abs_min_coef_plus_1)})
                 // the coefficient at index 'index+1' is now 1 or -1.
                 
-                val new_e = (e + min_coef * (smod(e, abs_min_coef_plus_1)))/abs_min_coef_plus_1
-                val new_a = min_coef::(a map {
-                  case k => (k + min_coef * (smod(k, abs_min_coef_plus_1)))/abs_min_coef_plus_1
+                val new_e = (e + Math.abs(min_coef) * (smod(e, abs_min_coef_plus_1)))/abs_min_coef_plus_1
+                val new_a = Math.abs(min_coef)::(a map {
+                  case k => (k + Math.abs(min_coef) * (smod(k, abs_min_coef_plus_1)))/abs_min_coef_plus_1
                 })
                 // the coefficient at index 'index+1' is now 0, so it will be removed.
                 
@@ -177,7 +178,6 @@ object Common {
                         if(i == index +1) // We drop the line indicated by index
                           Nil
                         else {
-                          val neg_sign = if(min_coef > 0) -1 else 1
                           val vs_replaced = replaceElementAtIndexByCoef(enumerate(vs), index+1, 0)
                           if(i==0) {
                             val new_element = (e_assign+scalarProduct(a_assign, vs_replaced)) * min_coef_sign
@@ -195,7 +195,8 @@ object Common {
         }
     }
   
-  def smod(x:Int, m:Int) = {
+  def smod(x:Int, m_signed:Int) = {
+    val m = Math.abs(m_signed)
     val c = x % m
     if(c >= (m+1)/2)
       c - m

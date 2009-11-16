@@ -4,6 +4,28 @@ import org.scalatest._
 import org.scalatest.matchers._
 
 class CommonTest extends Spec with ShouldMatchers {
+    
+  describe("Common functions") {
+    it("should compute the GCD of a list") {
+      Common.gcdlist((-18)::12::0::36::Nil) should equal (6)
+    }
+    it("specialMod") {
+      Common.smod(10, 7) should equal(3)
+      Common.smod(11, 7) should equal(-3)
+      Common.smod(14, 7) should equal(0)
+      Common.smod(3, 8) should equal(3)
+      Common.smod(4, 8) should equal(-4)
+      Common.smod(5, 8) should equal(-3)
+      Common.smod(-10, 7) should equal(-3)
+      Common.smod(-11, 7) should equal(3)
+      Common.smod(-14, 7) should equal(0)
+      Common.smod(-3, 8) should equal(-3)
+      Common.smod(-4, 8) should equal(-4)
+      Common.smod(-5, 8) should equal(3)
+      Common.smod(1, -1) should equal(0)
+      Common.smod(5, -3) should equal(-1)
+    }
+  }
   describe("Auxiliary functions") {
     it("should insert zeros properly") {
       Common.insertPreviousZeros(List(-5, -6, 0, 3, 0, 2), List(17, -42, -53, 28)) should equal (List(17, -42, 0, -53, 0, 28))
@@ -37,6 +59,8 @@ class CommonTest extends Spec with ShouldMatchers {
       Common.bezout(-12, 8) should equal (List(1))
       Common.bezout(-13, 8) should equal (List(2))
       Common.bezout(-13, 42, 1, 17) should equal (List(0, 13, 0))
+      Common.bezout(1, -3, 2) should equal (List(1, 1))
+      Common.bezout(1, -3, -2) should equal (List(1, -1))
       Common.bezout(6, 5, 3) match {
         case x::y::Nil => (6+x*5+y*3) should equal (0)
         case l => l should equal ("a list with two elements")
@@ -70,12 +94,38 @@ class CommonTest extends Spec with ShouldMatchers {
       Common.bezoutWithBase(-13, 8) should equal (List(List(2)))
       Common.bezoutWithBase(-13, 8, 0) should equal (List(List(2, 0), List(0, 1)))
       Common.bezoutWithBase(-13, 42, 1, 17) should equal (List(List(0, 13, 0), List(1, -42, 0), List(0, -17, 1)))
+      Common.bezoutWithBase(1, -1) should equal (List(List(1)))
+      Common.bezoutWithBase(1, -3, 2) match {
+        case l@((a1::a2::Nil)::(b1::b2::Nil)::Nil) =>
+          println(l)
+          (1-a1*3+a2*2) should equal (0)
+          (-b1*3+b2*2) should equal (0)
+          (a1*b2-a2*b1) should not equal (0)
+        case l => l should equal ("a matrix with four elements")
+      }
+      Common.bezoutWithBase(1, -3, -2) match {
+        case l@((a1::a2::Nil)::(b1::b2::Nil)::Nil) =>
+          println(l)
+          (1-a1*3-a2*2) should equal (0)
+          (-b1*3-b2*2) should equal (0)
+          (a1*b2-a2*b1) should not equal (0)
+        case l => l should equal ("a matrix with four elements")
+      }
+      Common.bezoutWithBase(1, -23, -13) match {
+        case l@((a1::a2::Nil)::(b1::b2::Nil)::Nil) =>
+          println(l)
+          (1-a1*23-a2*13) should equal (0)
+          (-b1*23-b2*13) should equal (0)
+          (a1*b2-a2*b1) should not equal (0)
+        case l => l should equal ("a matrix with four elements")
+      }
       Common.bezoutWithBase(5, 6, 4, 3) match {
         case l@((a1::a2::a3::Nil)::(b1::b2::b3::Nil)::(c1::c2::c3::Nil)::Nil) =>
           println(l)
           (5+a1*6+a2*4+a3*3) should equal (0)
           (b1*6+b2*4+b3*3) should equal (0)
           (c1*6+c2*4+c3*3) should equal (0)
+          (a1*b2*c3+a2*b3*c1+a3*b1*c2-a1*b3*c2-a2*b1*c3-a3*b2*c1) should not equal (0)
         case l => l should equal ("a matrix with nine elements")
       }
       Common.bezoutWithBase(17, 10, 15, 6) match {
@@ -84,28 +134,9 @@ class CommonTest extends Spec with ShouldMatchers {
           (17+a1*10+a2*15+a3*6) should equal (0)
           (b1*10+b2*15+b3*6) should equal (0)
           (c1*10+c2*15+c3*6) should equal (0)
+          (a1*b2*c3+a2*b3*c1+a3*b1*c2-a1*b3*c2-a2*b1*c3-a3*b2*c1) should not equal (0)
         case l => l should equal ("a matrix with nine elements")
       }
-    }
-  }
-  
-  describe("Common functions") {
-    it("should compute the GCD of a list") {
-      Common.gcdlist((-18)::12::0::36::Nil) should equal (6)
-    }
-    it("specialMod") {
-      Common.smod(10, 7) should equal(3)
-      Common.smod(11, 7) should equal(-3)
-      Common.smod(14, 7) should equal(0)
-      Common.smod(3, 8) should equal(3)
-      Common.smod(4, 8) should equal(-4)
-      Common.smod(5, 8) should equal(-3)
-      Common.smod(-10, 7) should equal(-3)
-      Common.smod(-11, 7) should equal(3)
-      Common.smod(-14, 7) should equal(0)
-      Common.smod(-3, 8) should equal(-3)
-      Common.smod(-4, 8) should equal(-4)
-      Common.smod(-5, 8) should equal(3)
     }
   }
 }

@@ -68,11 +68,11 @@ object PASynthesis {
       case PAGreaterZero(pac) => pac.toString + " > 0"
       case PAGreaterEqZero(pac) => pac.toString + " >= 0"
       case PADivision(numerator, denominator) => val string_numerator = numerator.toString
-        if((string_numerator indexOf '-') >=0  || (string_numerator indexOf '+') >=0) {
-          "("+ string_numerator + ")/" + denominator
-        } else {
-          string_numerator +"/"+ denominator
-        }
+        //if((string_numerator indexOf '-') >=0  || (string_numerator indexOf '+') >=0) {
+          "("+ string_numerator + "- ("+denominator+" + ("+string_numerator+")%"+denominator+")%"+denominator+")/" + denominator
+        //} else {
+        //  string_numerator +"/"+ denominator
+        //}
       case PAIfThenElse(condition, ifthen, ifelse) => "if("+condition+") {"+ifthen+"} else {"+ifelse+"}"
       case PAMinimum(l) => "min(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
       case PAMaximum(l) => "max(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
@@ -105,6 +105,10 @@ object PASynthesis {
   
   abstract sealed class PAFormula extends PAExpression {
     def replace(y: PAVariable, t: PACombination): PAFormula
+    def replaceList(lxt : List[(PAVariable, PACombination)]): PAFormula = {
+      lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
+    }
+    
     // This matching IS exhaustive since other matches are made if this is an atomic equation
     def simplified: PAFormula = this match {
       case PAConjunction(eqs) => val eqs_simplified = eqs map (_.simplified)
@@ -151,7 +155,8 @@ object PASynthesis {
   abstract sealed class PAEquation extends PAFormula {
     override def simplified: PAEquation = this match {
       case PADivides(1, pac) => PATrue()
-      case PADivides(0, pac) => PAEqualZero(pac.simplified.normalized)
+      case PADivides(n, PACombination(i, Nil, Nil)) => if((i % n) == 0) PATrue() else PAFalse()
+      case PADivides(0, pac) => PAEqualZero(pac).simplified
       case PADivides(n, pac) => PADivides(n, pac.simplified) // OptimizeMe !
       case PAEqualZero(pac) => PAEqualZero(pac.simplified.normalized) match {
         case PAEqualZero(PACombination(0, Nil, Nil)) => PATrue()
@@ -176,19 +181,22 @@ object PASynthesis {
   abstract class PATerm extends PAExpression {
     def replace(y: PAVariable, t: PACombination):PATerm
     def simplified:PATerm
-    def replaceList(lyt : List[(PAVariable, PACombination)]): PATerm = this.replaceList(Nil, lyt)
+    def replaceList(lxt : List[(PAVariable, PACombination)]): PATerm = {
+      lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
+    }
 
     def replaceList(lxt : List[(PAVariable, PACombination)], lyt : List[(PAVariable, PACombination)]): PATerm = {
-      val result = lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
-      lyt.foldLeft(result){ case (result, (y, t)) => result.replace(y, t) }
+      this.replaceList(lxt).replaceList(lyt)
     }
   }
   
   case class PADivision(numerator : PACombination, denominator : Int) extends PATerm {
-    def replace(y: PAVariable, t: PACombination):PADivision = PADivision(numerator.replace(y, t), denominator)
+    def replace(y: PAVariable, t: PACombination):PATerm = PADivision(numerator.replace(y, t), denominator).simplified
 
     def simplified:PATerm = (numerator.simplified, denominator) match {
       case (n, 1) => n
+      case (n, 0) => PADivision(n, 0)
+      case (PACombination(n, Nil, Nil), d) => PACombination((n - (d + (n % d))%d)/d, Nil, Nil)
       case (n, d) => PADivision(n, d)
     }
   }
@@ -203,19 +211,27 @@ object PASynthesis {
   }
   
   case class PAMinimum(expressions: List[PATerm]) extends PATerm {
-    def replace(y: PAVariable, t: PACombination):PAMinimum = PAMinimum(expressions map (_.replace(y, t)))
+    def replace(y: PAVariable, t: PACombination):PATerm = PAMinimum(expressions map (_.replace(y, t))).simplified
     def simplified:PATerm = expressions match {
       case Nil => PACombination(0, Nil, Nil)
       case a::Nil => a.simplified
-      case l => PAMinimum(l map (_.simplified))
+      case a::b::q =>
+        (a.simplified, b.simplified) match {
+          case (PACombination(i, Nil, Nil), PACombination(j, Nil, Nil)) => PAMinimum(PACombination(Math.min(i, j), Nil, Nil)::q).simplified //OptimizeMe
+          case (a, b) => PAMinimum(a::b::(q map (_.simplified)))
+        }
     }
   }
   case class PAMaximum(expressions: List[PATerm]) extends PATerm {
-    def replace(y: PAVariable, t: PACombination):PAMaximum = PAMaximum(expressions map (_.replace(y, t)))
+    def replace(y: PAVariable, t: PACombination):PATerm = PAMaximum(expressions map (_.replace(y, t))).simplified
     def simplified:PATerm = expressions match {
       case Nil => PACombination(0, Nil, Nil)
       case a::Nil => a.simplified
-      case l => PAMaximum(l map (_.simplified))
+      case a::b::q =>
+        (a.simplified, b.simplified) match {
+          case (PACombination(i, Nil, Nil), PACombination(j, Nil, Nil)) => PAMaximum(PACombination(Math.max(i, j), Nil, Nil)::q).simplified //OptimizeMe
+          case (a, b) => PAMaximum(a::b::(q map (_.simplified)))
+        }
     }
   }
   
@@ -377,9 +393,13 @@ object PASynthesis {
   //Combines the two sentences, adding a "\n" if needed
   def combineSentences(s1: String, s2: String):String = (if(s1.endsWith("\n") || s1 == "") s1 else s1 + "\n") + s2
   
+  def inputAssignmentToScalaString(t: (InputVar, PATerm)) = t match {
+    case (i, t) => "val "+ i.name + " = " + t
+  }
+  
   //Combines input sentences
   def innerScalaInput(input_assignment:List[(InputVar, PATerm)], indent:String):String = {
-    val prog_input = input_assignment map {case (i, t) => indent+"val "+ i.name + " = " + t} match {
+    val prog_input = input_assignment map {case assignment => indent + inputAssignmentToScalaString(assignment)} match {
       case Nil => ""
       case l => l reduceLeft {(t1, t2) => (t1 + "\n" + t2)}
     }
@@ -413,6 +433,13 @@ object PASynthesis {
   case class PACaseSplit(programs: List[(PACondition, PAProgram)]) extends PAAbstractProgram {
     override def toString = toScalaString("  ")
     def toScalaString(indent: String) = PACaseSplit.toScalaString("  ", programs)
+    def execute(l: Map[InputVar, Int]): Map[OutputVar, Int] = {
+      programs foreach {
+        case (cond, prog) =>
+          if(cond.execute(l)) return prog.execute(l)
+      }
+      Map[OutputVar, Int]()
+    }
   }
   
   // Programs
@@ -459,6 +486,11 @@ object PASynthesis {
       }
     }
   }
+  def toPAInputAssignment(imap : Map[InputVar, Int]):List[(InputVar, PACombination)] =
+    imap.toList map {case (v, i) => (v, PACombination(i, Nil, Nil))}
+  def toPAOutputAssignment(imap : Map[OutputVar, Int]):List[(OutputVar, PACombination)] =
+    imap.toList map {case (v, i) => (v, PACombination(i, Nil, Nil))}
+  
   case class PAProgram(input_variables: List[InputVar],
                        input_assignment: List[(InputVar, PATerm)],
                        case_splits: PACaseSplit,
@@ -504,6 +536,27 @@ object PASynthesis {
       var prog = function_definition
       (function_definition::inner_content::result::"}"::Nil).reduceLeft(combineSentences(_, _))
     }
+    
+    // Exectues the program on a list of arguments, return the values of the outputvars.
+    def execute(l: Map[InputVar, Int]): Map[OutputVar, Int] = {
+      var input_value_map = l
+      input_assignment foreach {
+        case (v, t) => t.replaceList(toPAInputAssignment(input_value_map)) match {
+          case PACombination(i, Nil, Nil) => input_value_map += (v -> i) 
+          case _ => throw new Exception("Was not able to reduce term "+t+" to integer under the mapping "+input_value_map)
+        }
+      }
+      var output_value_map = case_splits.execute(input_value_map)
+      val input_assignments_listed = toPAInputAssignment(input_value_map)
+      output_assignment foreach {
+        case (v, t) =>
+          t.replaceList(input_assignments_listed, toPAOutputAssignment(output_value_map)) match {
+          case PACombination(i, Nil, Nil) => output_value_map += (v -> i) 
+          case _ => throw new Exception("Was not able to reduce term "+t+" to integer under the mappings "+input_value_map+" and "+output_value_map)
+        }
+      }
+      Map[OutputVar, Int]() ++ (output_variables map {case v => (v, (output_value_map(v)))})
+    }
   }
   
   // Filters the useful assignments from the one that are useless.
@@ -525,13 +578,26 @@ object PASynthesis {
   }
   
   case class PACondition(input_assignment: List[(InputVar, PATerm)], global_condition: PAFormula) {
-    def conditionToScalaString = global_condition.toString
+    def conditionToScalaString = input_assignment match {
+      case Nil => global_condition.toString
+      case _ => "{"+(input_assignment map (inputAssignmentToScalaString(_)) reduceLeft (_+";"+_)) + ";"+global_condition.toString+"}"
+    }
     
-    override def toString = {
-      innerScalaInput(input_assignment, "//! ")
-      val prog_input = innerScalaInput(input_assignment, "//! ")
-      val global_condition_str = "//! " + conditionToScalaString
-      combineSentences(prog_input, global_condition_str)
+    override def toString = conditionToScalaString
+    
+    def execute(l: Map[InputVar, Int]): Boolean = {
+      var input_value_map = l
+      input_assignment foreach {
+        case (v, t) => t.replaceList(toPAInputAssignment(input_value_map)) match {
+          case PACombination(i, Nil, Nil) => input_value_map += (v -> i) 
+          case _ => throw new Exception("Was not able to reduce term "+t+" to integer under the mapping "+input_value_map)
+        }
+      }
+      global_condition.replaceList(toPAInputAssignment(input_value_map)) match {
+        case PATrue() => true
+        case PAFalse() => false
+        case t => throw new Exception ("Could not find the truth value of "+this+" under the mapping "+input_value_map+". Got the result: "+t)  
+      }
     }
   }
   
@@ -822,11 +888,11 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
         min_coefs_o1 < min_coefs_o2
     }
     
-    interesting_equalities match {
+    (interesting_equalities sort by_least_outputvar_coef) match {
       case Nil => non_equalities
       case (eq1@PAEqualZero(PACombination(c1, i1, o1)))::rest_equalities =>
         // Looking for a coefficient 1 or -1 in front of outputvars in the first equality.
-        o1 find { t=> t._1 == 1 || t._1 == -1 } match {
+        /*o1 find { t=> t._1 == 1 || t._1 == -1 } match {
           case Some(p@(coef, y@OutputVar(name))) =>
             //We have a satisfying assignment
             val new_assignment = PACombination(c1, i1, o1 - p)/(-coef)
@@ -837,7 +903,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
             delOutputVar(y)
             // by "false", we mean that the next equality to be solve can be taken arbitrarily
             solveEqualities(new_equalities, blown_equalities ++ new_non_equalities)
-          case None => 
+          case None => */
             // At least we know that eq1 has a smallest coefficient.
             val o1_coefs = o1 map (_._1)
             val o1_vars = o1 map (_._2)
@@ -846,10 +912,10 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
                 // We find a solution to o1_coefs.o1_vars - 1 = 0
                 // Then we know that by multiplying the first line by coef+i1_coef.i1.vars, we obtain the general solution
                 val pa_input = PACombination(c1, i1, Nil)
-                val solution_for_minus1 = Common.bezoutWithBase(-1, o1_coefs)
-                val first_line:List[PACombination] = solution_for_minus1.head map (pa_input * _)
+                val solution_for_1 = Common.bezoutWithBase(1, o1_coefs)
+                val first_line:List[PACombination] = solution_for_1.head map (pa_input * _)
                 // From this solution, we introduce |o1| - 1 new variables to solve the equality and remove the equation.
-                val new_assignments = solution_for_minus1.tail.foldLeft(first_line) { case (assignments, line) =>
+                val new_assignments = solution_for_1.tail.foldLeft(first_line) { case (assignments, line) =>
                     val y = getNewOutputVar()
                     (assignments zip line) map { case (expr, coef) => expr + (y*coef)}
                 }
@@ -874,7 +940,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
                   case _ => solveEqualities(rest_equalities, non_equalities) // Should NOT happen as there is at least one variable in PAEqualZero so it cannot be jugded as something else.
                 }
             }
-        }
+        //}
     }
   }
   
