@@ -73,9 +73,8 @@ object PASynthesis {
         //} else {
         //  string_numerator +"/"+ denominator
         //}
-      case PAIfThenElse(condition, ifthen, ifelse) => "if("+condition+") {"+ifthen+"} else {"+ifelse+"}"
-      case PAMinimum(l) => "min(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
-      case PAMaximum(l) => "max(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
+      case PAMinimum(l) => "Math.min(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
+      case PAMaximum(l) => "Math.max(" + (l map (_.toString) reduceLeft(_ + ", " + _)) + ")"
       case pac@PACombination(_, _, _) => pac.toNiceString
       case PATrue() => "true"
       case PAFalse() => "false"
@@ -130,6 +129,7 @@ object PASynthesis {
           case l => PADisjunction(l) 
         }
       }
+      case _ => throw new Error("Simplified failed on "+this)
     }
     def &&(that : PAFormula) = PAConjunction(this::that::Nil).simplified
     def ||(that : PAFormula)  = PADisjunction(this::that::Nil).simplified
@@ -198,15 +198,6 @@ object PASynthesis {
       case (n, 0) => PADivision(n, 0)
       case (PACombination(n, Nil, Nil), d) => PACombination((n - (d + (n % d))%d)/d, Nil, Nil)
       case (n, d) => PADivision(n, d)
-    }
-  }
-  
-  case class PAIfThenElse(condition: PAEquation, ifthen : PATerm, ifelse : PATerm) extends PATerm {
-    def replace(y: PAVariable, t: PACombination):PAIfThenElse = PAIfThenElse(condition.replace(y, t), ifthen.replace(y, t), ifelse.replace(y, t))
-    def simplified:PATerm = condition.simplified match {
-      case PATrue() => ifthen.simplified
-      case PAFalse() => ifelse.simplified
-      case new_condition => PAIfThenElse(new_condition, ifthen.simplified, ifelse.simplified) 
     }
   }
   
@@ -650,22 +641,24 @@ object PASynthesis {
 
   /// ************* Function used in the algorithm ***************///
   val alphabet = "abcdefghijklmnopqrstuvwxyz"
-  def newOutputVariable(existing: List[OutputVar]): OutputVar = {
+  def newOutputVariable(input_existing: List[InputVar], output_existing : List[OutputVar]): OutputVar = {
     //var typical = "xyzmnpqrstuvw"
     var i = 0
+    val names = (input_existing map (_.name)) ++ (output_existing map (_.name))
     (0 to 25) foreach { i =>
-      val test = OutputVar("y"+alphabet.substring(i, i+1))
-      if(!(existing contains test))
-        return test
+      val test = "y"+alphabet.substring(i, i+1)
+      if(!(names contains test))
+        return OutputVar(test)
     }
-    while(existing contains OutputVar("y"+i)) {
+    while(names contains ("y"+i)) {
       i+=1
     }
     OutputVar("y"+i)
   }
-  def newInputVariable(existing: List[InputVar]): InputVar = {
+  def newInputVariable(input_existing: List[InputVar], output_existing : List[OutputVar]): InputVar = {
     var i = 0
-    while(existing contains InputVar("x"+i)) {
+    val names = (input_existing map (_.name)) ++ (output_existing map (_.name))
+    while(names contains ("x"+i)) {
       i+=1
     }
     InputVar("x"+i)
@@ -844,22 +837,22 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
     input_variables = (y::input_variables)
     input_variables_encountered = (y::input_variables_encountered)
   }
-  def getNewOutputVarWithoutRegistering() = PASynthesis.newOutputVariable(output_variables_encountered)
+  def getNewOutputVarWithoutRegistering() = PASynthesis.newOutputVariable(input_variables_encountered, output_variables_encountered)
   def getNewOutputVar() = {
     val y = getNewOutputVarWithoutRegistering()
     addOutputVar(y)
     y
   }
   def getNewInputVar() = {
-    val x = PASynthesis.newInputVariable(input_variables_encountered)
+    val x = PASynthesis.newInputVariable(input_variables_encountered, output_variables_encountered)
     addInputVar(x)
     x
   }
   // List of reversed assignments: At the end, leftmost assignments should be done at the end.
   var input_assignments: List[(InputVar, PATerm)] = Nil
   var output_assignments: List[(OutputVar, PATerm)] = Nil
-  def addInputAssignment (x: InputVar,  t: PATerm) = input_assignments  = input_assignments ++ ((x, t)::Nil)
-  def addOutputAssignment(y: OutputVar, t: PATerm) = output_assignments = (y, t)::output_assignments
+  def addInputAssignment (x: InputVar,  t: PATerm) = input_assignments  = input_assignments ++ ((x, t.simplified)::Nil)
+  def addOutputAssignment(y: OutputVar, t: PATerm) = output_assignments = (y, t.simplified)::output_assignments
 
   ///*********** Functions used in the algorithm ***************//
   def simplifyEquations(equations: List[PASynthesis.PAEquation]) : List[PASynthesis.PAEquation] = {
@@ -888,59 +881,46 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
         min_coefs_o1 < min_coefs_o2
     }
     
-    (interesting_equalities sort by_least_outputvar_coef) match {
+    val sorted_equalities = interesting_equalities sort by_least_outputvar_coef
+    
+    sorted_equalities match {
       case Nil => non_equalities
       case (eq1@PAEqualZero(PACombination(c1, i1, o1)))::rest_equalities =>
-        // Looking for a coefficient 1 or -1 in front of outputvars in the first equality.
-        /*o1 find { t=> t._1 == 1 || t._1 == -1 } match {
-          case Some(p@(coef, y@OutputVar(name))) =>
-            //We have a satisfying assignment
-            val new_assignment = PACombination(c1, i1, o1 - p)/(-coef)
-            addOutputAssignment(y, new_assignment)
-            //We inject this assignment to all other equations, removing the previous equality.
-            val (new_equalities, blown_equalities) = partitionPAEqualZero(rest_equalities map (_.replace(y, new_assignment)))
-            val new_non_equalities = non_equalities map (_.replace(y, new_assignment))
-            delOutputVar(y)
-            // by "false", we mean that the next equality to be solve can be taken arbitrarily
-            solveEqualities(new_equalities, blown_equalities ++ new_non_equalities)
-          case None => */
-            // At least we know that eq1 has a smallest coefficient.
-            val o1_coefs = o1 map (_._1)
-            val o1_vars = o1 map (_._2)
-            Common.gcdlist(o1_coefs) match {
-              case 1 => 
-                // We find a solution to o1_coefs.o1_vars - 1 = 0
-                // Then we know that by multiplying the first line by coef+i1_coef.i1.vars, we obtain the general solution
-                val pa_input = PACombination(c1, i1, Nil)
-                val solution_for_1 = Common.bezoutWithBase(1, o1_coefs)
-                val first_line:List[PACombination] = solution_for_1.head map (pa_input * _)
-                // From this solution, we introduce |o1| - 1 new variables to solve the equality and remove the equation.
-                val new_assignments = solution_for_1.tail.foldLeft(first_line) { case (assignments, line) =>
-                    val y = getNewOutputVar()
-                    (assignments zip line) map { case (expr, coef) => expr + (y*coef)}
-                }
-                var new_equalities = rest_equalities
-                var new_nonequalities = non_equalities
-                (o1_vars zip new_assignments) foreach {
-                  case (v, pac) => addOutputAssignment(v, pac)
-                    val (new_eqs, blown_eqs) = partitionPAEqualZero(new_equalities map (_.replace(v, pac)))
-                    new_equalities = new_eqs
-                    new_nonequalities = blown_eqs ++ (new_nonequalities map (_.replace(v, pac)))
-                    delOutputVar(v)
-                }
-                solveEqualities(new_equalities, new_nonequalities)
-
-              case n => // n > 1
-                /// Introduce a new input variable.
-                val x = getNewInputVar()
-                addPrecondition(PADivides(n, PACombination(c1, i1, Nil)))
-                addInputAssignment(x, PADivision(PACombination(c1, i1, Nil), n))
-                PAEqualZero(PACombination(0, (n, x)::Nil, o1)).simplified match { // Should divide by n, as it was the gcd of all other variables.
-                  case new_eq@PAEqualZero(_) => solveEqualities(new_eq::rest_equalities, non_equalities)
-                  case _ => solveEqualities(rest_equalities, non_equalities) // Should NOT happen as there is at least one variable in PAEqualZero so it cannot be jugded as something else.
-                }
+        val o1_coefs = o1 map (_._1)
+        val o1_vars = o1 map (_._2)
+        Common.gcdlist(o1_coefs) match {
+          case 1 => 
+            // We find a solution to o1_coefs.o1_vars + 1 = 0
+            // Then we know that by multiplying the first line by coef+i1_coef.i1.vars, we obtain the general solution
+            val pa_input = PACombination(c1, i1, Nil)
+            val solution_for_1 = Common.bezoutWithBase(1, o1_coefs)
+            val first_line:List[PACombination] = solution_for_1.head map (pa_input * _)
+            // From this solution, we introduce |o1| - 1 new variables to solve the equality and remove the equation.
+            val new_assignments = solution_for_1.tail.foldLeft(first_line) { case (assignments, line) =>
+                val y = getNewOutputVar()
+                (assignments zip line) map { case (expr, coef) => expr + (y*coef)}
             }
-        //}
+            var new_equalities = rest_equalities
+            var new_nonequalities = non_equalities
+            (o1_vars zip new_assignments) foreach {
+              case (v, pac) => addOutputAssignment(v, pac)
+                val (new_eqs, blown_eqs) = partitionPAEqualZero(new_equalities map (_.replace(v, pac)))
+                new_equalities = new_eqs
+                new_nonequalities = blown_eqs ++ (new_nonequalities map (_.replace(v, pac)))
+                delOutputVar(v)
+            }
+            solveEqualities(new_equalities, new_nonequalities)
+
+          case n => // n > 1
+            /// Introduce a new input variable.
+            val x = getNewInputVar()
+            addPrecondition(PADivides(n, PACombination(c1, i1, Nil)))
+            addInputAssignment(x, PADivision(PACombination(c1, i1, Nil), n))
+            PAEqualZero(PACombination(0, (n, x)::Nil, o1)).simplified match { // Should divide by n, as it was the gcd of all other variables.
+              case new_eq@PAEqualZero(_) => solveEqualities(new_eq::rest_equalities, non_equalities)
+              case _ => solveEqualities(rest_equalities, non_equalities) // Should NOT happen as there is at least one variable in PAEqualZero so it cannot be jugded as something else.
+            }
+        }
     }
   }
   
@@ -1086,13 +1066,13 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
             case (l_left@Nil, l_right@l, l_remaining) =>
               // Only bounded on the right by equations of style b*y <= pac, so we know that the integer upper bounds are pac/b
               val upper_bounds = l_right map { case (b , pac) => PADivision(pac, b).simplified }
-              addOutputAssignment(y, PAMinimum(upper_bounds).simplified)
+              addOutputAssignment(y, PAMinimum(upper_bounds))
               delOutputVar(y)
               current_inequalities = l_remaining
             case (l_left@l, l_right@Nil, l_remaining) =>
               // Only bounded on the left by equations of style pac <= a*y, so we know that the integer upper bounds are (pac+a-1)/a
               val lower_bounds = l_left map { case (pac, a) => PADivision(pac + PACombination(a-1), a).simplified }
-              addOutputAssignment(y, PAMaximum(lower_bounds).simplified)
+              addOutputAssignment(y, PAMaximum(lower_bounds))
               delOutputVar(y)
               current_inequalities = l_remaining
             case _ =>
@@ -1135,11 +1115,11 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
       if(partial_modulo_ending_feasible) {
         if(l_right.size <= l_left.size) {
           val upper_bounds = l_right map { case (b , pac) => PADivision(pac, b).simplified } // Copy paste from above
-          addOutputAssignment(y, PAMinimum(upper_bounds).simplified)
+          addOutputAssignment(y, PAMinimum(upper_bounds))
           delOutputVar(y)
         } else {
           val lower_bounds = l_left map { case (pac, a) => PADivision(pac + PACombination(a-1), a).simplified }
-          addOutputAssignment(y, PAMaximum(lower_bounds).simplified)
+          addOutputAssignment(y, PAMaximum(lower_bounds))
           delOutputVar(y)
         }
         
@@ -1164,15 +1144,17 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
       } else {
         if(l_right.size <= l_left.size) {
           val upper_bounds = l_right map { case (b , pac) => PADivision(pac, b).simplified } // Copy paste from above
-          addOutputAssignment(y, PAMinimum(upper_bounds).simplified)
+          addOutputAssignment(y, PAMinimum(upper_bounds))
           delOutputVar(y)
         } else {
           val lower_bounds = l_left map { case (pac, a) => PADivision(pac + PACombination(a-1), a).simplified }
-          addOutputAssignment(y, PAMaximum(lower_bounds).simplified)
+          addOutputAssignment(y, PAMaximum(lower_bounds))
           delOutputVar(y)
         }
         // OptimizeMe : If a is smaller than b, use it instead of a.
-        var variables_used = (output_variables_initial++output_variables).removeDuplicates
+        var output_variables_used = (output_variables_encountered).removeDuplicates
+        var input_variables_used = (input_variables_encountered).removeDuplicates
+        
         // We collect a list of list of disjoint possibilities
         val disjoint_possibilities:List[List[(PAGreaterEqZero, PAEqualZero)]] = l_left flatMap { case (eqA, a) =>
           l_right flatMap { case (b, eqB) =>
@@ -1190,8 +1172,8 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
               //         ...
               //         a*(b-1) <= eqB*a - eqA*b && eqB = b*y0+(b-1)
               val pac_ab = ((eqB*a) - (eqA*b))
-              val y = PASynthesis.newOutputVariable(variables_used) // One variable for each new type of equation.
-              variables_used = y::variables_used
+              val y = PASynthesis.newOutputVariable(input_variables_used, output_variables_used) // One variable for each new type of equation. Not for this problem.
+              output_variables_used = y::output_variables_used
               
               val eq_possibilities : List[(PAGreaterEqZero, PAEqualZero)] = (0 to (b-1)).toList map { k:Int =>
                 val new_ineq = PAGreaterEqZero(pac_ab - PACombination(k*a))
