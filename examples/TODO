@@ -1,0 +1,16 @@
+
+- if variables have declared ranges, then they automatically become part of constraints
+  (example with hours, minutes, etc - the ranges should appear as part of variable declarations)
+
+- add examples of dependent variable programming (automatically enforcing PA constraint):
+   * encoding array indices of 3-dimensional arrays
+   * give loop invariant, synthesize fully integer body based on making purely integer VC true
+
+- examples where we get non-uniqueness warnings
+
+- add pattern matching as a construct and write examples for it
+  * warnings for non-uniqueness and incompleteness
+
+Say: PA is a nice compositional construct, well-defined class, with no
+artificial restrictions, so more examples will come, much like they
+come from higher-order functions.
