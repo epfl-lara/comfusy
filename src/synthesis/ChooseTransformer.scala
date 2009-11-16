@@ -13,6 +13,12 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
+  private val SHOWDEBUGINFO = false
+  private def dprintln(str: String): Unit = {
+    if(SHOWDEBUGINFO)
+      println(str)
+  }
+
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
 
   /** The actual rewriting function is the following. */
@@ -54,8 +60,8 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          println("Corresponding formula: " + extractedFormula)
-          println("Symbols in there     : " + extractedSymbols)
+          dprintln("Corresponding formula: " + extractedFormula)
+          dprintln("Symbols in there     : " + extractedSymbols)
 
           // LINEARIZATION
           val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
@@ -69,12 +75,12 @@ trait ChooseTransformer
           if (foundErrors)
             return a
 
-          println("Mikael-Style formula : " + paStyleFormula)
+          dprintln("Mikael-Style formula : " + paStyleFormula)
 
           val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
 
-          println("Precondition         : " + paPrec)
-          println("Program              : " + paProg)
+          dprintln("Precondition         : " + paPrec)
+          dprintln("Program              : " + paProg)
           
           // CODE GENERATION
           // Throw(New(Ident(unsatConstraintsException), List(Nil))) 

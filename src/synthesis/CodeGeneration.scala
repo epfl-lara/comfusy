@@ -15,12 +15,11 @@ trait CodeGeneration {
   private lazy val scalaMathMin: Symbol = definitions.getMember(scalaMath, "min")
   private lazy val scalaMathMax: Symbol = definitions.getMember(scalaMath, "max")
   
-  class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, initMap: SymbolMap) {
-    private val initialMap: SymbolMap = initMap
+  class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap) {
+    import scala.tools.nsc.util.NoPosition
 
     // defines a new variable and returns a new symbol map with it
     private def assign(map: SymbolMap, varNme: String, expr: PATerm): (SymbolMap,Tree) = {
-      import scala.tools.nsc.util.NoPosition
       val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "synLoc")).setInfo(definitions.IntClass.tpe)
       (map + (varNme -> newSym), ValDef(newSym, termToCode(map, expr)))
     }
@@ -29,8 +28,20 @@ trait CodeGeneration {
       Ident(map(varNme))
     }
   
-    def programToCode(prec: PACondition, prog: PAProgram): Tree = {
-      var map: SymbolMap = initialMap
+    def programToCode(prec: PACondition, prog: PAProgram): Tree = 
+      programToCode(initialMap, prec, prog)
+
+    def programToCode(initMap: SymbolMap, prec: PACondition, prog: PAProgram): Tree = {
+      var map: SymbolMap = initMap
+
+      val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
+
+      val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
+        List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
+      } else {
+        Nil
+      }
+
       var inputAss: List[Tree] = Nil
       prog.input_assignment.foreach(ia => {
         val (nmap, ntree) = assign(map, ia._1.name, ia._2)
@@ -38,6 +49,34 @@ trait CodeGeneration {
         inputAss = ntree :: inputAss
       })
       inputAss = inputAss.reverse
+
+      val caseSplitAss: List[Tree] = if(prog.case_splits.programs.size != 0) {
+        // there is some if-then-else mojo in there.
+        // we find the names of the output variables of the case splits, and...
+        val valNames = prog.case_splits.programs(0)._2.output_variables.map(ov => ov.name)
+        val valCount = valNames.size
+        // ...prepare a symbol for each of them.
+        valNames.foreach(vn => {
+          val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "csOut")).setInfo(definitions.IntClass.tpe)
+          map = map + (vn -> newSym)
+        })
+
+        // generates the big case split (hopefully)
+        val bigIteExpr: Tree = prog.case_splits.programs.foldRight[Tree](throwTree)((condProgPair: (PACondition,PAProgram), rest: Tree) => {
+          If(conditionToCode(map, condProgPair._1), programToCode(map, PACondition(Nil,PATrue()), condProgPair._2), rest) 
+        })
+
+        if (valCount == 1) {
+          List(ValDef(map(valNames.head), bigIteExpr))
+        } else {
+          val tempTupleSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+          ValDef(tempTupleSym, bigIteExpr) :: (
+            for(val c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
+          ).toList
+        }
+      } else {
+        Nil
+      }
 
       var outputAss: List[Tree] = Nil
       prog.output_assignment.foreach(oa => {
@@ -47,13 +86,8 @@ trait CodeGeneration {
       })
       outputAss = outputAss.reverse
 
-      val preCheckCode: Tree = If(
-        Select(conditionToCode(map,prec), nme.UNARY_!),
-        Throw(New(Ident(unsatConstraintsException), List(Nil))),
-        EmptyTree) 
-
       Block(
-        preCheckCode :: inputAss ::: outputAss
+        preCheckCode ::: inputAss ::: caseSplitAss ::: outputAss
       ,
       if(prog.output_variables.size == 1) {
         variable(map, prog.output_variables(0).name) 
@@ -67,29 +101,31 @@ trait CodeGeneration {
   
     def termToCode(map: SymbolMap, term: PATerm): Tree = term match {
       case PADivision(num, den) => {
-        // num / den 
-        // Apply(Select(termToCode(map,num), nme.DIV), List(Literal(Constant(den))))
-        // (num - ((den + num%den) % den)) / den
-        val numTree = termToCode(map, num)
+        // num / den actually generates:
+        // { val N = ''num''; (N - ((den + N % den) % den)) / den }
+        // (floored integer division, where -1 / 2 = -1 (w. rest 1))
+        val numSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "divNum")).setInfo(definitions.IntClass.tpe)
+        val numTree = Ident(numSym) 
         val denTree = Literal(Constant(den))
-        Apply(
-          Select(
-            Apply(
-              Select(
-                numTree,
-                nme.SUB),
-              List(
-                Apply(
-                  Select(
-                    Apply(Select(denTree, nme.ADD), List(Apply(Select(numTree,nme.MOD), List(denTree)))),
-                    nme.MOD),
-                  List(denTree))
-                )),
-            nme.DIV),
-          List(denTree)
-        )
+        Block(
+          List(ValDef(numSym, termToCode(map,num))),
+          Apply(
+            Select(
+              Apply(
+                Select(
+                  numTree,
+                  nme.SUB),
+                List(
+                  Apply(
+                    Select(
+                      Apply(Select(denTree, nme.ADD), List(Apply(Select(numTree,nme.MOD), List(denTree)))),
+                      nme.MOD),
+                    List(denTree))
+                  )),
+              nme.DIV),
+            List(denTree)
+        ))
       }
-      case PAIfThenElse(cond, then, elze) => scala.Predef.error("X") // equationToCode 
       case PAMinimum(terms) => {
         def binaryMin(t1:Tree,t2:Tree): Tree = {
           Apply(Select(Select(Ident(scalaPack), scalaMath), scalaMathMin), List(t1, t2))
