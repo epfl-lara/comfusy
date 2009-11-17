@@ -54,6 +54,8 @@
             <classpath>
                 <path refid="build.path" />
             </classpath>
+	    <exclude name="**/APA*.scala" />
+            <exclude name="**/PASynthesisTest.scala" />
         </scalac>
     </target>
 

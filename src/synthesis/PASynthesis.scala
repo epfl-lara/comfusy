@@ -146,7 +146,9 @@ object PASynthesis {
       case PAConjunction(a::q)   => a.getEquations flatMap { eq => PAConjunction(q).getEquations_tailrec(currentList ++ eq) }
       case PADisjunction(Nil)    => Stream(List(PAFalse()))
       case PADisjunction(a::Nil) => a.getEquations_tailrec(currentList)
-      case PADisjunction(a::q) => Stream.concat(a.getEquations_tailrec(currentList), PADisjunction(q).getEquations_tailrec(currentList))
+      case PADisjunction(a::q) => a.getEquations_tailrec(currentList) append PADisjunction(q).getEquations_tailrec(currentList)
+      case PATrue() => Stream(List(PATrue()))
+      case PAFalse() => Stream(List(PAFalse()))
       //case PANegation(f)
     }
   }
@@ -690,6 +692,7 @@ object PASynthesis {
       partitionPAGreaterEqZero(q)
     case (PAFalse()::q) =>
       (Nil, Nil, false)
+    case (k::q) => throw new Exception(k + " is not supported at this point. Shoujld have been converted earlier.")
   }
 
   
