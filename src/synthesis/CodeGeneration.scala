@@ -37,6 +37,9 @@ trait CodeGeneration {
       val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
 
       val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
+//        val toZ3 = conditionToFormula(prec)
+//        println(Arithmetic.toSMTString(toZ3))
+
         List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
       } else {
         Nil
@@ -186,5 +189,26 @@ trait CodeGeneration {
       inputAss = inputAss.reverse
       Block(inputAss, formulaToCode(map, cond.global_condition)) 
     }
+/*
+    def conditionToFormula(cond: PACondition): Arithmetic.Formula = {
+      def f2f(f: PAFormula): Arithmetic.Formula = f match {
+        case PAConjunction(fs) => Arithmetic.And(fs.map(f2f(_)))
+        case PADisjunction(fs) => Arithmetic.Or(fs.map(f2f(_)))
+        case PADivides(coef, pac) => {
+          val num = c2t(pac)
+          val den = Arithmetic.IntLit(coef)
+          Arithmetic.Div(
+            Arithmetic.Minus(
+              num,
+              Arithmetic.Modulo(
+                Arithmetic.Plus(den :: Arithmetic.Modulo(num, den) :: Nil),
+                den)),
+            den)
+        }
+      }
+      println(cond)
+      Arithmetic.True()
+    }
+*/
   }
 }

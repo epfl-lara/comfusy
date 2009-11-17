@@ -293,4 +293,36 @@ object Arithmetic {
     case Modulo(l,r) => "(" + pp(l) + " % " + pp(r) + ")"
     case Min(ts) => "min " + ts.map(pp(_)).mkString("{", ", ", "}")
   }
+
+  def toSMTString(form: Formula): String = {
+    import java.lang.StringBuilder
+
+    def f2s(frm: Formula): String = frm match {
+      case And(fs) => "(and " + fs.map(f2s(_)).mkString(" ") + ")"
+      case Or(fs) => "(or " + fs.map(f2s(_)).mkString(" ") + ")"
+      case Not(f) => "(not " + f2s(f) + ")"
+      case True() => "true"
+      case False() => "false"
+      case Equals(l,r) => "(= " + t2s(l) + ' ' + t2s(r) + ')'
+      case NotEquals(l,r) => "(distinct " + t2s(l) + ' ' + t2s(r) + ')'
+      case LessThan(l,r) => "(< " + t2s(l) + ' ' + t2s(r) + ')'
+      case LessEqThan(l,r) =>"(<= " + t2s(l) + ' ' + t2s(r) + ')'
+      case GreaterThan(l,r) =>"(> " + t2s(l) + ' ' + t2s(r) + ')'
+      case GreaterEqThan(l,r) =>"(>= " + t2s(l) + ' ' + t2s(r) + ')'
+    }
+
+    def t2s(trm: Term): String = trm match {
+      case Variable(id) => id.toString
+      case IntLit(v) => if(v < 0) "(~ " + (-v).toString + ')' else v.toString
+      case Neg(t) => "(~ " + t2s(t) + ")"
+      case Plus(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(+ " + s1 + " " + s2 + ")")
+      case Minus(l,r) => "(- " + t2s(l) + " " + t2s(r) + ")"
+      case Times(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(* " + s1 + " " + s2 + ")")
+      case Div(l,r) => "(/ " + t2s(l) + " " + t2s(r) + ")"
+      case Modulo(l,r) => "(% " + t2s(l) + " " + t2s(r) + ")"
+      case Min(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(ite (< " + s1 + " " + s2 + ") " + s1 + " " + s2 + ")")
+    }
+
+    f2s(form)
+  }
 }
