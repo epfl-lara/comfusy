@@ -37,8 +37,8 @@ trait CodeGeneration {
       val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
 
       val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
-//        val toZ3 = conditionToFormula(prec)
-//        println(Arithmetic.toSMTString(toZ3))
+        val toZ3 = conditionToFormula(prec)
+        println(Arithmetic.toSMTBenchmark(toZ3))
 
         List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
       } else {
@@ -189,13 +189,27 @@ trait CodeGeneration {
       inputAss = inputAss.reverse
       Block(inputAss, formulaToCode(map, cond.global_condition)) 
     }
-/*
+
     def conditionToFormula(cond: PACondition): Arithmetic.Formula = {
       def f2f(f: PAFormula): Arithmetic.Formula = f match {
         case PAConjunction(fs) => Arithmetic.And(fs.map(f2f(_)))
         case PADisjunction(fs) => Arithmetic.Or(fs.map(f2f(_)))
-        case PADivides(coef, pac) => {
-          val num = c2t(pac)
+        case PADivides(coef, comb) => Arithmetic.Equals(Arithmetic.IntLit(0), Arithmetic.Modulo(t2t(comb), Arithmetic.IntLit(coef)))
+        case PAEqualZero(comb) => Arithmetic.Equals(Arithmetic.IntLit(0), t2t(comb))
+        case PAGreaterZero(comb) => Arithmetic.LessThan(Arithmetic.IntLit(0), t2t(comb))
+        case PAGreaterEqZero(comb) => Arithmetic.LessEqThan(Arithmetic.IntLit(0), t2t(comb))
+        case PATrue() => Arithmetic.True()
+        case PAFalse() => Arithmetic.False()
+      }
+
+      def t2t(t: PATerm): Arithmetic.Term = t match {
+        case PACombination(coef, ias, oas) => {
+          Arithmetic.Plus(Arithmetic.IntLit(coef) ::
+            ias.map(ia => Arithmetic.Times(Arithmetic.IntLit(ia._1) :: Arithmetic.Variable(ia._2.name) :: Nil)) :::
+            oas.map(oa => Arithmetic.Times(Arithmetic.IntLit(oa._1) :: Arithmetic.Variable(oa._2.name) :: Nil)))
+        }
+        case PADivision(pac, coef) => { 
+          val num = t2t(pac)
           val den = Arithmetic.IntLit(coef)
           Arithmetic.Div(
             Arithmetic.Minus(
@@ -205,14 +219,15 @@ trait CodeGeneration {
                 den)),
             den)
         }
+        case PAMinimum(ts) => Arithmetic.Min(ts.map(t2t(_)))
+        case PAMaximum(ts) => Arithmetic.Neg(Arithmetic.Min(ts.map(tr => Arithmetic.Neg(t2t(tr)))))
+
       }
+
       println(cond)
-      Arithmetic.True()
-
-
-
-      AAAAAAAAAAAAAAAAAAAAAAAAAAAAA NOT FINISHED! PANIC !
+      val out = Arithmetic.normalized(f2f(cond.global_condition))
+      println(out)
+      out
     }
-*/
   }
 }

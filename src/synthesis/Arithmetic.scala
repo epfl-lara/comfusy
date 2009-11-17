@@ -294,13 +294,31 @@ object Arithmetic {
     case Min(ts) => "min " + ts.map(pp(_)).mkString("{", ", ", "}")
   }
 
+  def toSMTBenchmark(form: Formula): String = {
+    val fv = variablesOf(form)
+    var str = "(benchmark X\n :logic QF_LIA \n :status unknown\n"
+
+    if(!fv.isEmpty) {
+      str = str + ":extrafuns ( "
+      fv.foreach(vn => {
+        str = str + "(" + vn.toString + " Int) "
+      })
+      str = str + ")\n"
+    }
+
+    str = str + " :formula \n"
+    str = str + toSMTString(form)
+    str = str + "\n)"
+    str
+  }
+
   def toSMTString(form: Formula): String = {
     import java.lang.StringBuilder
 
     def f2s(frm: Formula): String = frm match {
-      case And(fs) => "(and " + fs.map(f2s(_)).mkString(" ") + ")"
-      case Or(fs) => "(or " + fs.map(f2s(_)).mkString(" ") + ")"
-      case Not(f) => "(not " + f2s(f) + ")"
+      case And(fs) => "(and " + fs.map(f2s(_)).mkString(" ") + ')'
+      case Or(fs) => "(or " + fs.map(f2s(_)).mkString(" ") + ')'
+      case Not(f) => "(not " + f2s(f) + ')'
       case True() => "true"
       case False() => "false"
       case Equals(l,r) => "(= " + t2s(l) + ' ' + t2s(r) + ')'
@@ -314,11 +332,11 @@ object Arithmetic {
     def t2s(trm: Term): String = trm match {
       case Variable(id) => id.toString
       case IntLit(v) => if(v < 0) "(~ " + (-v).toString + ')' else v.toString
-      case Neg(t) => "(~ " + t2s(t) + ")"
-      case Plus(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(+ " + s1 + " " + s2 + ")")
-      case Minus(l,r) => "(- " + t2s(l) + " " + t2s(r) + ")"
-      case Times(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(* " + s1 + " " + s2 + ")")
-      case Div(l,r) => "(/ " + t2s(l) + " " + t2s(r) + ")"
+      case Neg(t) => "(~ " + t2s(t) + ')'
+      case Plus(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(+ " + s1 + ' ' + s2 + ')')
+      case Minus(l,r) => "(- " + t2s(l) + ' ' + t2s(r) + ')'
+      case Times(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(* " + s1 + ' ' + s2 + ')')
+      case Div(l,r) => "(/ " + t2s(l) + ' ' + t2s(r) + ')'
       case Modulo(l,r) => "(% " + t2s(l) + " " + t2s(r) + ")"
       case Min(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(ite (< " + s1 + " " + s2 + ") " + s1 + " " + s2 + ")")
     }
