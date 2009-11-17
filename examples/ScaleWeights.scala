@@ -13,7 +13,7 @@ object ScaleWeights {
         && -1 <= w3 && w3 <= 1
         && -1 <= w4 && w4 <= 1
       ))
-      println("For the weight: " + weight)
+      println("Put what you think weights " + weight + " to the left, then")
       println("Put 1         : " + numToPlace(w1))
       println("Put 3         : " + numToPlace(w2))
       println("Put 9         : " + numToPlace(w3))
