@@ -88,7 +88,7 @@ trait ChooseTransformer
           extractedSymbols.foreach(sym => {
             initialMap = initialMap + (sym.name.toString -> sym)
           })
-          val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, funBody.pos)
+          val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
           typer.typed(atOwner(currentOwner) {
             codeGen.programToCode(paPrec, paProg) 
           })

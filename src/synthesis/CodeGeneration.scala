@@ -39,7 +39,7 @@ trait CodeGeneration {
 
       if(prec.global_condition == PAFalse()) {
         if(emitWarnings)
-          reporter.error(pos, "Predicate will never be satisfiable.")
+          reporter.error(pos, "Synthesis predicate will never be satisfiable.")
 
         return throwTree // trick so that the code still typechecks
       }
@@ -48,11 +48,11 @@ trait CodeGeneration {
         // first we check for unsatisfiability
         Arithmetic.isSat(Arithmetic.Not(conditionToFormula(prec))) match {
           case (Some(true), Some(ass)) => {
-            reporter.warning(pos, "Predicate is not satisfiable for variable assignment: " + ass)
+            reporter.warning(pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "))
 
           }
           case (Some(false), _) => ;
-          case (_,_) => reporter.warning(pos, "Predicate may not always be satisfiable.")
+          case (_,_) => reporter.warning(pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).")
         }
       }
 
@@ -225,8 +225,9 @@ trait CodeGeneration {
             ias.map(ia => Arithmetic.Times(Arithmetic.IntLit(ia._1) :: Arithmetic.Variable(ia._2.name) :: Nil)) :::
             oas.map(oa => Arithmetic.Times(Arithmetic.IntLit(oa._1) :: Arithmetic.Variable(oa._2.name) :: Nil)))
         }
-        case PADivision(pac, coef) => { 
-          val num = t2t(pac)
+        case PADivision(pac, coef) => {
+          Arithmetic.Div(t2t(pac), Arithmetic.IntLit(coef))
+          /* val num = t2t(pac)
           val den = Arithmetic.IntLit(coef)
           Arithmetic.Div(
             Arithmetic.Minus(
@@ -234,15 +235,16 @@ trait CodeGeneration {
               Arithmetic.Modulo(
                 Arithmetic.Plus(den :: Arithmetic.Modulo(num, den) :: Nil),
                 den)),
-            den)
+            den) */
         }
         case PAMinimum(ts) => Arithmetic.Min(ts.map(t2t(_)))
         case PAMaximum(ts) => Arithmetic.Neg(Arithmetic.Min(ts.map(tr => Arithmetic.Neg(t2t(tr)))))
-
       }
 
-      //println(cond)
-      val out = Arithmetic.normalized(f2f(cond.global_condition))
+      val inAss = cond.input_assignment.map(ia => {
+        Arithmetic.Equals(Arithmetic.Variable(ia._1.name), t2t(ia._2))
+      })
+      val out = Arithmetic.normalized(Arithmetic.And(f2f(cond.global_condition) :: inAss))
       //println(out)
       out
     }
