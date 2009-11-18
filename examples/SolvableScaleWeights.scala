@@ -1,6 +1,6 @@
 import synthesis.Definitions._
 
-object ScaleWeights {
+object SolvableScaleWeights {
   def main(args: Array[String]): Unit = {
     println("Give me a weight: ")
     val weight: Int = Console.readInt
