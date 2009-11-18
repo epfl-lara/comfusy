@@ -6,6 +6,7 @@ trait CodeGeneration {
   self: ChooseTransformer =>
   import global._
   import PASynthesis._
+  import scala.tools.nsc.util.Position
 
   type SymbolMap = Map[String,Symbol]
 
@@ -15,7 +16,7 @@ trait CodeGeneration {
   private lazy val scalaMathMin: Symbol = definitions.getMember(scalaMath, "min")
   private lazy val scalaMathMax: Symbol = definitions.getMember(scalaMath, "max")
   
-  class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap) {
+  class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap, val emitWarnings: Boolean, val pos: Position) {
     import scala.tools.nsc.util.NoPosition
 
     // defines a new variable and returns a new symbol map with it
@@ -36,10 +37,26 @@ trait CodeGeneration {
 
       val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
 
-      val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
-        val toZ3 = conditionToFormula(prec)
-        println(Arithmetic.toSMTBenchmark(toZ3))
+      if(prec.global_condition == PAFalse()) {
+        if(emitWarnings)
+          reporter.error(pos, "Predicate will never be satisfiable.")
 
+        return throwTree // trick so that the code still typechecks
+      }
+
+      if(emitWarnings) {
+        // first we check for unsatisfiability
+        Arithmetic.isSat(Arithmetic.Not(conditionToFormula(prec))) match {
+          case (Some(true), Some(ass)) => {
+            reporter.warning(pos, "Predicate is not satisfiable for variable assignment: " + ass)
+
+          }
+          case (Some(false), _) => ;
+          case (_,_) => reporter.warning(pos, "Predicate may not always be satisfiable.")
+        }
+      }
+
+      val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
         List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
       } else {
         Nil
@@ -224,9 +241,9 @@ trait CodeGeneration {
 
       }
 
-      println(cond)
+      //println(cond)
       val out = Arithmetic.normalized(f2f(cond.global_condition))
-      println(out)
+      //println(out)
       out
     }
   }

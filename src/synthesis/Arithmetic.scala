@@ -295,25 +295,62 @@ object Arithmetic {
   }
 
   def toSMTBenchmark(form: Formula): String = {
-    val fv = variablesOf(form)
-    var str = "(benchmark X\n :logic QF_LIA \n :status unknown\n"
-
-    if(!fv.isEmpty) {
-      str = str + ":extrafuns ( "
-      fv.foreach(vn => {
-        str = str + "(" + vn.toString + " Int) "
-      })
-      str = str + ")\n"
+    // the main problem is that we need to encode things like division, min and
+    // modulo. We add "local equalities" for that.
+    lazy val varsInForm = variablesOf(form)
+    
+    val prefixUses = new scala.collection.mutable.HashMap[String,Int]
+    def freshName(prefix: String): String = {
+      var next = (prefixUses.getOrElse(prefix, -1) + 1)
+      while(varsInForm.contains(prefix + next)) {
+        next = next + 1
+      }
+      prefixUses(prefix) = next
+      prefix + next
     }
 
-    str = str + " :formula \n"
-    str = str + toSMTString(form)
-    str = str + "\n)"
-    str
-  }
+    val newEqs = new scala.collection.mutable.HashMap[String,Term]
+    def addEq(nme: String, term: Term): Unit = {
+      newEqs(nme) = term
+    }
+    val newForms = new scala.collection.mutable.HashSet[Formula]
+    def addFormula(f: Formula): Unit = {
+      newForms(f) = true
+    }
 
-  def toSMTString(form: Formula): String = {
-    import java.lang.StringBuilder
+    def flatten(trm: Term): Term = trm match {
+      case v: Variable => v
+      case i: IntLit => i
+      case Neg(t) => Neg(flatten(t))
+      case Plus(ts) => Plus(ts.map(flatten(_)))
+      case Minus(l,r) => Minus(flatten(l), flatten(r))
+      case Times(ts) => Times(ts.map(flatten(_)))
+      case Div(l,r) => {
+        val lf = flatten(l)
+        val rf = flatten(r)
+        val res = Variable(freshName("divRes"))
+        val rem = Variable(freshName("divRem"))
+        addFormula(Equals(Times(res, rf), Minus(lf, rem)))
+        addFormula(GreaterEqThan(rem, IntLit(0)))
+        addFormula(LessThan(rem, rf))
+        addEq(res.id, res)
+        addEq(rem.id, rem)
+        res
+      }
+      case Modulo(l,r) => {
+        val lf = flatten(l)
+        val rf = flatten(r)
+        val res = Variable(freshName("modRes"))
+        val coe = Variable(freshName("modCoe"))
+        addFormula(Equals(lf, Plus(res, Times(rf, coe))))
+        addFormula(GreaterEqThan(res, IntLit(0)))
+        addFormula(LessThan(res, rf))
+        addEq(res.id, res)
+        addEq(coe.id, coe)
+        res
+      }
+      case Min(ts) => Min(ts.map(flatten(_)))
+    }
 
     def f2s(frm: Formula): String = frm match {
       case And(fs) => "(and " + fs.map(f2s(_)).mkString(" ") + ')'
@@ -321,14 +358,14 @@ object Arithmetic {
       case Not(f) => "(not " + f2s(f) + ')'
       case True() => "true"
       case False() => "false"
-      case Equals(l,r) => "(= " + t2s(l) + ' ' + t2s(r) + ')'
-      case NotEquals(l,r) => "(distinct " + t2s(l) + ' ' + t2s(r) + ')'
-      case LessThan(l,r) => "(< " + t2s(l) + ' ' + t2s(r) + ')'
-      case LessEqThan(l,r) =>"(<= " + t2s(l) + ' ' + t2s(r) + ')'
-      case GreaterThan(l,r) =>"(> " + t2s(l) + ' ' + t2s(r) + ')'
-      case GreaterEqThan(l,r) =>"(>= " + t2s(l) + ' ' + t2s(r) + ')'
+      case Equals(l,r) => "(= " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
+      case NotEquals(l,r) => "(distinct " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
+      case LessThan(l,r) => "(< " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
+      case LessEqThan(l,r) =>"(<= " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
+      case GreaterThan(l,r) =>"(> " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
+      case GreaterEqThan(l,r) =>"(>= " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
     }
-
+  
     def t2s(trm: Term): String = trm match {
       case Variable(id) => id.toString
       case IntLit(v) => if(v < 0) "(~ " + (-v).toString + ')' else v.toString
@@ -338,9 +375,79 @@ object Arithmetic {
       case Times(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(* " + s1 + ' ' + s2 + ')')
       case Div(l,r) => "(/ " + t2s(l) + ' ' + t2s(r) + ')'
       case Modulo(l,r) => "(% " + t2s(l) + " " + t2s(r) + ")"
-      case Min(ts) => ts.map(t2s(_)).reduceLeft((s1:String,s2:String) => "(ite (< " + s1 + " " + s2 + ") " + s1 + " " + s2 + ")")
+      case Min(ts) => {
+        ts.map(t => {
+          val fresh = freshName("inMin")
+          addEq(fresh, t)
+          t2s(Variable(fresh))
+        }).reduceLeft((s1:String,s2:String) => "(ite (< " + s1 + " " + s2 + ") " + s1 + " " + s2 + ")")
+      }
     }
 
-    f2s(form)
+    var str = "(benchmark X\n :logic QF_LIA \n :status unknown\n"
+
+    // because of side effects, you need to do this now, or you won't know
+    // which variables have been added !
+    val formulaString = f2s(form)
+
+    if(!(varsInForm.isEmpty && newEqs.isEmpty)) {
+      str = str + " :extrafuns ( "
+      varsInForm.foreach(vn => {
+        str = str + "(" + vn.toString + " Int) "
+      })
+      newEqs.keys.foreach(vn => {
+        str = str + "(" + vn.toString + " Int) "
+      })
+      str = str + ")\n"
+    }
+
+    for((nme,trm) <- newEqs) {
+      str = str + " :assumption (= " + nme + " " + t2s(trm) + ")\n"
+    }
+
+    for(frm <- newForms) {
+      // note that this breaks if one of the new formulas has not been
+      // flattened...
+      str = str + " :assumption " + f2s(frm) + "\n"
+    }
+
+    str = str + " :formula \n"
+    str = str + formulaString
+    str = str + "\n)"
+    str
+  }
+
+  // uses Z3 to check for satisfiability, and gives a model if SAT
+  def isSat(form: Formula): (Option[Boolean],Option[Map[String,Int]]) = {
+    val varsInForm = variablesOf(form)
+    val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
+    val out     = new java.io.PrintStream(process.getOutputStream)
+    out.println(toSMTBenchmark(form))
+    out.flush
+    out.close
+    val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))
+    var line: String = in.readLine
+    var lines: List[String] = Nil
+    while(line != null) {
+      lines = line :: lines
+      line = in.readLine
+    }
+    lines = lines.reverse
+   
+    var ass = Map.empty[String,Int]
+    var status: Option[Boolean] = None
+
+    for (val l <- lines) {
+      if(l.contains(" -> ")) {
+        val spl = l.split(" -> ")
+        if(varsInForm.contains(spl(0)))
+          ass = ass + (spl(0) -> spl(1).toInt)
+      } else if(l.contains("unsat")) {
+        status = Some(false)
+      } else if(l == "sat") {
+        status = Some(true)
+      }
+    }
+    (status, if(status == Some(true)) Some(ass) else None)
   }
 }

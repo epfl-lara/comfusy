@@ -31,7 +31,7 @@ class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin)
       //global ref to freshName creator
       fresh = unit.fresh
       
-      transformChooseCalls(unit)
+      transformChooseCalls(unit, pluginInstance.emitWarnings)
     }
   }
 }

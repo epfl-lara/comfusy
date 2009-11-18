@@ -22,10 +22,10 @@ trait ChooseTransformer
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
 
   /** The actual rewriting function is the following. */
-  def transformChooseCalls(unit: CompilationUnit): Unit =
-    unit.body = new ChooseTransformer(unit).transform(unit.body)
+  def transformChooseCalls(unit: CompilationUnit, emitWarnings: Boolean): Unit =
+    unit.body = new ChooseTransformer(unit, emitWarnings).transform(unit.body)
 
-  class ChooseTransformer(unit: CompilationUnit) extends TypingTransformer(unit) {
+  class ChooseTransformer(unit: CompilationUnit, val emitWarnings: Boolean) extends TypingTransformer(unit) {
     override def transform(tree: Tree): Tree = {
       tree match {
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
@@ -88,7 +88,7 @@ trait ChooseTransformer
           extractedSymbols.foreach(sym => {
             initialMap = initialMap + (sym.name.toString -> sym)
           })
-          val codeGen = new CodeGenerator(unit, currentOwner, initialMap)
+          val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, funBody.pos)
           typer.typed(atOwner(currentOwner) {
             codeGen.programToCode(paPrec, paProg) 
           })
