@@ -476,7 +476,9 @@ object Arithmetic {
       val varsInForm = variablesOf(form)
       val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
       val out     = new java.io.PrintStream(process.getOutputStream)
-      out.println(toSMTBenchmark(form))
+      val smt = toSMTBenchmark(form)
+      out.println(smt)
+      //println(smt)
       out.flush
       out.close
       val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))

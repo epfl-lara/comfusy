@@ -89,10 +89,10 @@ trait ChooseTransformer
                 wm = wm + "\n"
                 wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
                 wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
-                reporter.warning(a.pos, wm)
+                reporter.info(a.pos, wm, true)
               }
               case (Some(false), _) => ; // desirable: solution is always unique if it exists
-              case (_,_) => reporter.warning(a.pos, "Synthesis predicate may not always have a unique solution (decision procedure did not respond).")
+              case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always have a unique solution (decision procedure did not respond).", true)
             }
           }
 
@@ -105,11 +105,11 @@ trait ChooseTransformer
           if(emitWarnings) {
             isSat(Not(conditionToFormula(paPrec))) match {
               case (Some(true), Some(ass)) => {
-                reporter.warning(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "))
+                reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
 
               }
               case (Some(false), _) => ;
-              case (_,_) => reporter.warning(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).")
+              case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
             }
           }
           
