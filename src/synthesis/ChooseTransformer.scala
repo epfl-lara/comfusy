@@ -102,7 +102,7 @@ trait ChooseTransformer
           dprintln("Program              : " + paProg)
 
           // We try to falsify the pre-condition.
-          if(emitWarnings) {
+          if(emitWarnings && paPrec != PASynthesis.PATrue()) {
             isSat(Not(conditionToFormula(paPrec))) match {
               case (Some(true), Some(ass)) => {
                 reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
@@ -258,7 +258,7 @@ trait ChooseTransformer
     val inAss = cond.input_assignment.map(ia => {
       Equals(Variable(ia._1.name), t2t(ia._2))
     })
-    val out = normalized(And(f2f(cond.global_condition) :: inAss))
+    val out = normalized(Or(Not(And(inAss)) :: f2f(cond.global_condition) :: Nil))
     //println(out)
     out
   }

@@ -26,4 +26,8 @@ object Definitions {
   object * {
     def unapply(i: Int): Option[(Int,Int)] = extractorNotRewritten
   }
+
+  object - {
+    def unapply(i: Int): Option[(Int,Int)] = extractorNotRewritten
+  }
 }
