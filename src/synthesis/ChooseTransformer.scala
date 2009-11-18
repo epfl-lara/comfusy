@@ -72,18 +72,48 @@ trait ChooseTransformer
               PASynthesis.PAFalse()
             }
           }
-          if (foundErrors)
+          if (foundErrors) {
             return a
+          }
+
+          // We check for uniqueness of the solution.
+          if(emitWarnings) {
+            val outVars = Set.empty ++ outputVariableList
+            val (fcopy,toMap,fromMap) = renameVarSet(extractedFormula, outVars)
+            val diseqs: List[Formula] = toMap.map(p => NotEquals(Variable(p._1), Variable(p._2))).toList
+            val completeFormula = And(extractedFormula :: fcopy :: diseqs)
+            isSat(completeFormula) match {
+              case (Some(true), Some(ass)) => {
+                var wm = "Synthesis predicate has multiple solutions for variable assignment: "
+                wm = wm + ass.keys.filter(k => !toMap.keys.contains(k) && !fromMap.keys.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
+                wm = wm + "\n"
+                wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
+                wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
+                reporter.warning(a.pos, wm)
+              }
+              case (Some(false), _) => ; // desirable: solution is always unique if it exists
+              case (_,_) => reporter.warning(a.pos, "Synthesis predicate may not always have a unique solution (decision procedure did not respond).")
+            }
+          }
 
           dprintln("Mikael-Style formula : " + paStyleFormula)
-
           val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
-
           dprintln("Precondition         : " + paPrec)
           dprintln("Program              : " + paProg)
+
+          // We try to falsify the pre-condition.
+          if(emitWarnings) {
+            isSat(Not(conditionToFormula(paPrec))) match {
+              case (Some(true), Some(ass)) => {
+                reporter.warning(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "))
+
+              }
+              case (Some(false), _) => ;
+              case (_,_) => reporter.warning(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).")
+            }
+          }
           
           // CODE GENERATION
-          // Throw(New(Ident(unsatConstraintsException), List(Nil))) 
           var initialMap: SymbolMap = Map.empty
           extractedSymbols.foreach(sym => {
             initialMap = initialMap + (sym.name.toString -> sym)
@@ -188,4 +218,49 @@ trait ChooseTransformer
       }
     }
   }
+
+  def conditionToFormula(cond: PASynthesis.PACondition): Formula = {
+    import PASynthesis._
+
+    def f2f(f: PAFormula): Formula = f match {
+      case PAConjunction(fs) => And(fs.map(f2f(_)))
+      case PADisjunction(fs) => Or(fs.map(f2f(_)))
+      case PADivides(coef, comb) => Equals(IntLit(0), Modulo(t2t(comb), IntLit(coef)))
+      case PAEqualZero(comb) => Equals(IntLit(0), t2t(comb))
+      case PAGreaterZero(comb) => LessThan(IntLit(0), t2t(comb))
+      case PAGreaterEqZero(comb) => LessEqThan(IntLit(0), t2t(comb))
+      case PATrue() => True()
+      case PAFalse() => False()
+    }
+
+    def t2t(t: PATerm): Term = t match {
+      case PACombination(coef, ias, oas) => {
+        Plus(IntLit(coef) ::
+          ias.map(ia => Times(IntLit(ia._1) :: Variable(ia._2.name) :: Nil)) :::
+          oas.map(oa => Times(IntLit(oa._1) :: Variable(oa._2.name) :: Nil)))
+      }
+      case PADivision(pac, coef) => {
+        Div(t2t(pac), IntLit(coef))
+        /* val num = t2t(pac)
+        val den = IntLit(coef)
+        Div(
+          Minus(
+            num,
+            Modulo(
+              Plus(den :: Modulo(num, den) :: Nil),
+              den)),
+          den) */
+      }
+      case PAMinimum(ts) => Min(ts.map(t2t(_)))
+      case PAMaximum(ts) => Neg(Min(ts.map(tr => Neg(t2t(tr)))))
+    }
+
+    val inAss = cond.input_assignment.map(ia => {
+      Equals(Variable(ia._1.name), t2t(ia._2))
+    })
+    val out = normalized(And(f2f(cond.global_condition) :: inAss))
+    //println(out)
+    out
+  }
+
 }

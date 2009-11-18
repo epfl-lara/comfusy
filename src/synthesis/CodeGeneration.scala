@@ -44,18 +44,6 @@ trait CodeGeneration {
         return throwTree // trick so that the code still typechecks
       }
 
-      if(emitWarnings) {
-        // first we check for unsatisfiability
-        Arithmetic.isSat(Arithmetic.Not(conditionToFormula(prec))) match {
-          case (Some(true), Some(ass)) => {
-            reporter.warning(pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "))
-
-          }
-          case (Some(false), _) => ;
-          case (_,_) => reporter.warning(pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).")
-        }
-      }
-
       val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
         List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
       } else {
@@ -207,46 +195,5 @@ trait CodeGeneration {
       Block(inputAss, formulaToCode(map, cond.global_condition)) 
     }
 
-    def conditionToFormula(cond: PACondition): Arithmetic.Formula = {
-      def f2f(f: PAFormula): Arithmetic.Formula = f match {
-        case PAConjunction(fs) => Arithmetic.And(fs.map(f2f(_)))
-        case PADisjunction(fs) => Arithmetic.Or(fs.map(f2f(_)))
-        case PADivides(coef, comb) => Arithmetic.Equals(Arithmetic.IntLit(0), Arithmetic.Modulo(t2t(comb), Arithmetic.IntLit(coef)))
-        case PAEqualZero(comb) => Arithmetic.Equals(Arithmetic.IntLit(0), t2t(comb))
-        case PAGreaterZero(comb) => Arithmetic.LessThan(Arithmetic.IntLit(0), t2t(comb))
-        case PAGreaterEqZero(comb) => Arithmetic.LessEqThan(Arithmetic.IntLit(0), t2t(comb))
-        case PATrue() => Arithmetic.True()
-        case PAFalse() => Arithmetic.False()
-      }
-
-      def t2t(t: PATerm): Arithmetic.Term = t match {
-        case PACombination(coef, ias, oas) => {
-          Arithmetic.Plus(Arithmetic.IntLit(coef) ::
-            ias.map(ia => Arithmetic.Times(Arithmetic.IntLit(ia._1) :: Arithmetic.Variable(ia._2.name) :: Nil)) :::
-            oas.map(oa => Arithmetic.Times(Arithmetic.IntLit(oa._1) :: Arithmetic.Variable(oa._2.name) :: Nil)))
-        }
-        case PADivision(pac, coef) => {
-          Arithmetic.Div(t2t(pac), Arithmetic.IntLit(coef))
-          /* val num = t2t(pac)
-          val den = Arithmetic.IntLit(coef)
-          Arithmetic.Div(
-            Arithmetic.Minus(
-              num,
-              Arithmetic.Modulo(
-                Arithmetic.Plus(den :: Arithmetic.Modulo(num, den) :: Nil),
-                den)),
-            den) */
-        }
-        case PAMinimum(ts) => Arithmetic.Min(ts.map(t2t(_)))
-        case PAMaximum(ts) => Arithmetic.Neg(Arithmetic.Min(ts.map(tr => Arithmetic.Neg(t2t(tr)))))
-      }
-
-      val inAss = cond.input_assignment.map(ia => {
-        Arithmetic.Equals(Arithmetic.Variable(ia._1.name), t2t(ia._2))
-      })
-      val out = Arithmetic.normalized(Arithmetic.And(f2f(cond.global_condition) :: inAss))
-      //println(out)
-      out
-    }
   }
 }

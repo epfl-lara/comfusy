@@ -116,6 +116,60 @@ object Arithmetic {
     case Min(ts) => ts.foldLeft(Set.empty[VariableID])(_ ++ variablesOf(_))
   }
 
+  def renameVarSet(form: Formula, varSet: Set[String]): (Formula,Map[String,String],Map[String,String]) = {
+    import scala.collection.mutable.HashMap
+    val varsInForm = variablesOf(form)
+    val prefixUses = new HashMap[String,Int]
+    var toMap      = Map.empty[String,String]
+    var fromMap    = Map.empty[String,String]
+    def freshName(prefix: String): String = {
+      var next = (prefixUses.getOrElse(prefix, -1) + 1)
+      while(varsInForm.contains(prefix + next)) {
+        next = next + 1
+      }
+      prefixUses(prefix) = next
+      prefix + next
+    }
+
+    def travF(frm: Formula): Formula = frm match {
+      case And(fs) => And(fs.map(travF(_)))
+      case Or(fs) => Or(fs.map(travF(_)))
+      case Not(f) => Not(travF(f))
+      case True() | False() => frm
+      case Equals(l,r) => Equals(travT(l), travT(r))
+      case NotEquals(l,r) => NotEquals(travT(l), travT(r))
+      case LessThan(l,r) => LessThan(travT(l), travT(r))
+      case LessEqThan(l,r) => LessEqThan(travT(l), travT(r))
+      case GreaterThan(l,r) => GreaterThan(travT(l), travT(r))
+      case GreaterEqThan(l,r) => GreaterEqThan(travT(l), travT(r))
+    }
+
+    def travT(trm: Term): Term = trm match {
+      case IntLit(_) => trm
+      case Variable(id) if varSet.contains(id) => {
+        if(toMap.isDefinedAt(id))
+          Variable(toMap(id))
+        else {
+          val nn = freshName(id)
+          toMap = toMap + (id -> nn)
+          fromMap = fromMap + (nn -> id)
+          Variable(nn)
+        }
+      }
+      case Variable(_) => trm
+      case Neg(t) => Neg(travT(t))
+      case Plus(ts) => Plus(ts.map(travT(_)))
+      case Minus(l,r) => Minus(travT(l), travT(r))
+      case Times(ts) => Times(ts.map(travT(_)))
+      case Div(l,r) => Div(travT(l), travT(r))
+      case Modulo(l,r) => Modulo(travT(l), travT(r))
+      case Min(ts) => Min(ts.map(travT(_)))
+    }
+
+    val nf = travF(form)
+    (nf,toMap,fromMap)
+  }
+
   def normalized(formula: Formula): Formula = {
     def nnf(f: Formula, switch: Boolean): Formula = f match {
       case And(fs) => if(switch) Or(fs.map(nnf(_, true))) else And(fs.map(nnf(_, false)))
@@ -221,7 +275,6 @@ object Arithmetic {
 
     nnf(formula, false)
   }
-
 
   object LinearCombination {
     private object CoefProduct {
@@ -419,35 +472,42 @@ object Arithmetic {
 
   // uses Z3 to check for satisfiability, and gives a model if SAT
   def isSat(form: Formula): (Option[Boolean],Option[Map[String,Int]]) = {
-    val varsInForm = variablesOf(form)
-    val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
-    val out     = new java.io.PrintStream(process.getOutputStream)
-    out.println(toSMTBenchmark(form))
-    out.flush
-    out.close
-    val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))
-    var line: String = in.readLine
-    var lines: List[String] = Nil
-    while(line != null) {
-      lines = line :: lines
-      line = in.readLine
-    }
-    lines = lines.reverse
-   
-    var ass = Map.empty[String,Int]
-    var status: Option[Boolean] = None
-
-    for (val l <- lines) {
-      if(l.contains(" -> ")) {
-        val spl = l.split(" -> ")
-        if(varsInForm.contains(spl(0)))
-          ass = ass + (spl(0) -> spl(1).toInt)
-      } else if(l.contains("unsat")) {
-        status = Some(false)
-      } else if(l == "sat") {
-        status = Some(true)
+    try {
+      val varsInForm = variablesOf(form)
+      val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
+      val out     = new java.io.PrintStream(process.getOutputStream)
+      out.println(toSMTBenchmark(form))
+      out.flush
+      out.close
+      val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))
+      var line: String = in.readLine
+      var lines: List[String] = Nil
+      while(line != null) {
+        lines = line :: lines
+        line = in.readLine
+      }
+      lines = lines.reverse
+     
+      var ass = Map.empty[String,Int]
+      var status: Option[Boolean] = None
+  
+      for (val l <- lines) {
+        if(l.contains(" -> ")) {
+          val spl = l.split(" -> ")
+          if(varsInForm.contains(spl(0)))
+            ass = ass + (spl(0) -> spl(1).toInt)
+        } else if(l.contains("unsat")) {
+          status = Some(false)
+        } else if(l == "sat") {
+          status = Some(true)
+        }
+      }
+      (status, if(status == Some(true)) Some(ass) else None)
+    } catch {
+      case (e: java.io.IOException) => {
+        Console.err.println("Warning: Cannot execute Z3. Is the executable in the path?.\n")
+        (None,None)
       }
     }
-    (status, if(status == Some(true)) Some(ass) else None)
   }
 }
