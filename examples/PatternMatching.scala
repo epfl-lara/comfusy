@@ -5,10 +5,11 @@ object PatternMatching {
     println("Give me a number.")
     val n = Console.readInt
 
-    n match {
-      case 3 * k     => println(n + " is 3 * " + k)
-      case 3 * k + 1 => println(n + " is 3 * " + k + " + 1")
-      case 3 * k + 2 => println(n + " is 3 * " + k + " + 2")
+    val str = n match {
+      case 3 * k     => n + " is 3 * " + k
+      case 3 * k + 1 => n + " is 3 * " + k + " + 1"
+      case 3 * k + 2 => n + " is 3 * " + k + " + 2"
     }
+    println(str)
   }
 }

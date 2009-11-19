@@ -165,6 +165,14 @@ object Arithmetic {
       case Modulo(l,r) => Modulo(travT(l), travT(r))
       case Min(ts) => Min(ts.map(travT(_)))
     }
+ 
+    // actually, we force this first, or if the variables don't appear we'll be
+    // in trouble.
+    for(v <- varSet) {
+      val vf = freshName(v)
+      toMap = toMap + (v -> vf)
+      fromMap = fromMap + (vf -> v)
+    }
 
     val nf = travF(form)
     (nf,toMap,fromMap)

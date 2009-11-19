@@ -123,7 +123,114 @@ trait ChooseTransformer
             codeGen.programToCode(paPrec, paProg) 
           })
         }
+
+        case m @ Match(selector, cases)
+          if isSubType(selector.tpe, definitions.IntClass.tpe)
+            && cases.forall(cse => cse.guard == EmptyTree) => {
+          reporter.info(m.pos, "I'm inside a synth. PM expression.", true)
+
+          val scrutSym = currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
+          val scrutName: String = scrutSym.name.toString
+
+          var encounteredNonArith: Boolean = false
+          var allAreNotArith: Boolean = true
+          val newCases = cases.map(cse => {
+            extractExtractors(cse.pat) match {
+              case Some((formula,inVars,outVars,wildcards)) => {
+                formula match {
+                  case Times(_) | Plus(_) | Minus(_,_) => allAreNotArith = false
+                  case _ => ;
+                }
+                val frm = normalized(Equals(formula, Variable(scrutName)))
+                
+                val realOutVarSet = outVars.map(_.name.toString) ++ wildcards
+
+                formulaToPAFormula(frm, realOutVarSet) match {
+                  case Some(f) => {
+                    val paStyle: PASynthesis.PAFormula = f
+                    println(frm)
+                    println(paStyle)
+                    val outputVariableList = realOutVarSet.toList
+                    val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyle)
+                    println("In:   " + inVars)
+                    println("Out:  " + outVars)
+                    println("Wild: " + wildcards)
+                    println("Prec: " + paPrec)
+                    println("Prog: " + paProg)
+
+                    // build the new casedef
+                    cse
+                  }
+                  case None => {
+                    encounteredNonArith = true
+                    reporter.error(cse.pat.pos, "Pattern is not linear arithmetic.")
+                    cse
+                  }
+                }
+              }
+              case None => { encounteredNonArith = true; cse }
+            }
+          })
+
+          if(allAreNotArith) {
+            return super.transform(m)
+          }
+
+          if(encounteredNonArith) {
+            reporter.error(m.pos, "Not all patterns are linear-arithmetic.")
+            return super.transform(m)
+          }
+
+          typer.typed(atOwner(currentOwner) {
+            Block(
+              ValDef(scrutSym, transform(selector))
+              :: Nil,
+              Match(Ident(scrutSym), newCases)
+            )
+          })
+        }
+
         case _ => super.transform(tree)
+      }
+    }
+
+    def extractExtractors(tree: Tree): Option[(Term,Set[Symbol],Set[Symbol],Set[String])] = {
+      var bindSymbols: Set[Symbol] = Set.empty
+      var inSymbols: Set[Symbol] = Set.empty
+      var wildcards: Set[String] = Set.empty
+      case class EscapeException() extends Exception
+      var wcCount = -1
+
+      def et(t: Tree): Term = t match {
+        case ExExTimes(t1,t2) => Times(et(t1), et(t2))
+        case ExExPlus(t1,t2) => Plus(et(t1), et(t2))
+        case ExExMinus(t1,t2) => Minus(et(t1), et(t2))
+        case b @ Bind(name, Ident(nme.WILDCARD)) => {
+          bindSymbols = bindSymbols + b.symbol
+          Variable(name.toString)
+        }
+        case Ident(nme.WILDCARD) => {
+          wcCount = wcCount + 1
+          val wcName = "wildcard" + wcCount
+          wildcards = wildcards + wcName
+          Variable("wildcard" + wcCount)
+        }
+        case i @ Ident(nme) if i.symbol.isStable => {
+          inSymbols = inSymbols + i.symbol
+          Variable(nme.toString)
+        }
+        case Literal(Constant(i: Int)) => IntLit(i)
+        case _ => {
+          reporter.error(t.pos, "invalid expression in arithmetic pattern")
+          throw EscapeException()
+        }
+      }
+
+      try {
+        val retTerm = et(tree)
+        Some((retTerm,inSymbols,bindSymbols,wildcards))
+      } catch {
+        case EscapeException() => None
       }
     }
 

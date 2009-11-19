@@ -142,4 +142,39 @@ trait ArithmeticExtractors {
       case _ => None
     }
   }
+
+  private lazy val synthModule    = definitions.getModule("synthesis") 
+  private lazy val synthDefModule = definitions.getModule("synthesis.Definitions")
+
+  object ExExGeneric {
+    def ua(tree: Tree, opName: Name) : Option[(Tree,Tree)] = tree match {
+      case UnApply(
+        Apply(
+          Select(
+            Select(
+              Select(i: Ident, n1),
+              n2),
+            n3),
+          List(Ident(nme.SELECTOR_DUMMY)))
+        , t1 :: t2 :: Nil) if (
+           i.symbol == synthModule
+        && n1 == synthDefModule.name
+        && n2 == opName
+        && n3.toString == "unapply") => Some((t1,t2))
+      case _ => None
+    }
+  }
+
+  // Extractors that extract calls to extractors...
+  object ExExTimes {
+    def unapply(tree: Tree) : Option[(Tree,Tree)] = ExExGeneric.ua(tree, nme.MUL)
+  }
+
+  object ExExPlus {
+    def unapply(tree: Tree) : Option[(Tree,Tree)] = ExExGeneric.ua(tree, nme.ADD)
+  }
+
+  object ExExMinus {
+    def unapply(tree: Tree) : Option[(Tree,Tree)] = ExExGeneric.ua(tree, nme.SUB)
+  }
 }

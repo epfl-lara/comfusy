@@ -18,7 +18,7 @@ object Definitions {
   def choose[A1,A2,A3,A4,A5,A6,A7,A8,A9,A10](predicate: (A1,A2,A3,A4,A5,A6,A7,A8,A9,A10) => Boolean) : (A1,A2,A3,A4,A5,A6,A7,A8,A9,A10) = chooseNotRewritten
 
   // These extractors allow us to write pattern matching expressions which look like arithmetic operators.
-  private def extractorNotRewritten: Nothing = error("an arithmetic extractor was not rewritten by the synthesis plugin")
+  private def extractorNotRewritten: Nothing = error("Illegal use of an arithmetic extractor (use it at top-level only, without guards, and make sure you run scalac with the synthesis plugin).")
   object + {
     def unapply(i: Int): Option[(Int,Int)] = extractorNotRewritten
   }
