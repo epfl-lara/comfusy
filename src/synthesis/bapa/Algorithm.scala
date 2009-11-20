@@ -349,6 +349,7 @@ object Algorithm {
 // it should return something like (variable -> NameUnderWhichWasCalled)
 // for example: val h00Var = {... code generating its value...}
 // then h000 -> IntVar(h00Var)
+    Map.empty[String,PAInt]
   }
 
 

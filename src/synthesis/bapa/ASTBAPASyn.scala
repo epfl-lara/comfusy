@@ -1,5 +1,7 @@
 package synthesis.bapa
 
+import synthesis.Arithmetic
+
 object ASTBAPASyn {
   sealed abstract class PAInt
   case class IntVar(i: String) extends PAInt
@@ -23,6 +25,8 @@ object ASTBAPASyn {
   case class IntLessEqual(i1: PAInt, i2: PAInt) extends Atom
   case class IntDivides(c:Int, i: PAInt) extends Atom
 
+  implicit def atom2formula(a: Atom): Formula = FAtom(a)
+
   sealed abstract class Formula
   case class And(f1: Formula, f2: Formula) extends Formula
   case class Or(f1: Formula, f2: Formula) extends Formula
@@ -36,10 +40,9 @@ object ASTBAPASyn {
   case class Take(setName: String, firstCount: PAInt, fromSet: BASet) extends SetAssignment
   case class Simple(setName: String, fromSet: BASet) extends SetAssignment
 
+  val LikeFalse: Formula = IntEqual(IntConst(0), IntConst(1))
 
 // =============================
-
-
 
   def bapaFormToArithForm(form: Formula): Arithmetic.Formula = {
     def f2f(f: Formula): Arithmetic.Formula = f match {
