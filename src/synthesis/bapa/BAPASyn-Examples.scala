@@ -8,6 +8,18 @@ object Examples {
 
 //---------------
 
+    val l31 = List("S")
+    val l32 = List("A1", "A2")
+    val l33: List[String] = Nil
+    val l34: List[String] = Nil
+    val a31 = IntLessEqual(Plus(Card(SetVar("A1")), Times(-1, Card(SetVar("A2")))), IntConst(1))
+    val a32 = IntLessEqual(IntConst(-1), Plus(Card(SetVar("A1")), Times(-1, Card(SetVar("A2")))))
+    val a33 = SetEqual(Union(SetVar("A1"), SetVar("A2")), EmptySet)
+    val f31 = And(And(FAtom(SetEqual(Union(SetVar("A1"), SetVar("A2")), SetVar("S"))), FAtom(a31)), And(FAtom(a32), FAtom(a33)))
+    val t3 = Task(l31, l32, l33, l34, f21)
+
+//---------------
+
     val l21 = List("B1", "B2")
     val l22 = List("A")
     val l23: List[String] = Nil
@@ -29,6 +41,7 @@ object Examples {
 
     def run (name: String, t: Task): Unit = t match {
       case Task(x, y, k, l, f) => {
+        println(name)
         print_Task(t)
         val f1 = synthesis.bapa.Algorithm.step1(f)
         print_BAPAFormula(f1)
@@ -47,8 +60,9 @@ object Examples {
 // -----
 
   def runExamples() {
-    run("t1", t1)
-    run("t2", t2)
+    run(" find a set that contains A and it is smaller than B", t1)
+    run(" find a set that is contained in B1 and in B2 and had at least 2 elements", t2)
+    run(" find two similar size partitions of S", t3)
   }
 
 
