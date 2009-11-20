@@ -2,6 +2,7 @@ package synthesis.bapa
 
 import synthesis.bapa.Printer._
 
+import ASTBAPASyn._
 
 object Examples {
 

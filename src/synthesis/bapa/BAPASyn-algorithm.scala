@@ -4,7 +4,10 @@ import scala.collection.mutable.Map
 import scala.collection.immutable.Set
 import java.lang.Integer
 
+import ASTBAPASyn._
+
 object Algorithm {
+
 
 // -------------- Step 1
 
@@ -334,8 +337,8 @@ object Algorithm {
   // f - formula result of translation,  fQE - formula result of "quantifier elimination"
   // return map that  has keeps values of l, vars
   def callArithmeticSynthesiser(k: List[String], l: List[String], vars: List[String], f: Formula, fQE: Formula): Map[String, PAInt] = {
-
-       NNNNNN = synthesis.PASynthesis.solve()
+       //NNNNNN = synthesis.PASynthesis.solve()
+       Map.empty[String,PAInt]
   }
 
 

@@ -1,5 +1,6 @@
 package synthesis.bapa
 
+import ASTBAPASyn._
 
 object Printer {
 
