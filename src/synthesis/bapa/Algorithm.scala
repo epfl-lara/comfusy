@@ -7,6 +7,14 @@ import java.lang.Integer
 import ASTBAPASyn._
 
 object Algorithm {
+  def solve (t: Task): (Formula,List[String],List[SetAssignment]) = {
+    val Task(x, y, k, l, f) = t
+
+    val f1 = synthesis.bapa.Algorithm.step1(f)
+    val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
+    val f3 = synthesis.bapa.Algorithm.step4(mAll, x)
+    synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+  }
 
 
 // -------------- Step 1
@@ -359,6 +367,7 @@ object Algorithm {
 // for example: val h00Var = {... code generating its value...}
 // then h000 -> IntVar(h00Var)
     val m = mapConnectingVariabes(outputVars)
+    m
   }
 
 
@@ -430,8 +439,9 @@ object Algorithm {
 
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
-   f: Formula, fQE: Formula, m: Map[String, Set[String]]): List[SetAssignment] = {
+   f: Formula, fQE: Formula, m: Map[String, Set[String]]): (Formula,List[String],List[SetAssignment]) = {
      val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
+     val outputVarsForMikael: List[String] = l ::: vars
      val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
      var s = x
      var listOfAssignments: List[SetAssignment] = Nil 
@@ -442,7 +452,7 @@ object Algorithm {
        s = e :: x
        i = j
      })
-     listOfAssignments
+     (f1,outputVarsForMikael,listOfAssignments.reverse)
   }
 
 }

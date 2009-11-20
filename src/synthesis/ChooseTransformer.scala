@@ -13,7 +13,7 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
-  private val SHOWDEBUGINFO = false
+  private val SHOWDEBUGINFO = true
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
       println(str.toString)
@@ -291,17 +291,38 @@ trait ChooseTransformer
           var foundErrors = false
           val Function(funValDefs, funBody) = predicate
 
-          // for the record
-          val outputVariableList = funValDefs.map(_.name.toString)
 
-          val frml: bapa.ASTBAPASyn.Formula = extractSetFormula(funBody) match {
-            case Some((p,_)) => p
+          val (frml,setVars,intVars) = extractSetFormula(funBody) match {
+            case Some((p,s1,s2)) => (p,s1,s2)
             case None => {
               foundErrors = true
-              bapa.ASTBAPASyn.LikeFalse
+              (bapa.ASTBAPASyn.LikeFalse,Set.empty[Symbol],Set.empty[Symbol])
             }
           }
-          println(frml)
+          if(foundErrors)
+            return a
+
+          val outSetVarList: List[Symbol] = funValDefs.map(_.symbol)
+          val inSetVarList: List[Symbol] = (setVars -- outSetVarList).toList
+          val inIntVarList: List[Symbol] = (intVars).toList
+
+          dprintln(frml)
+          dprintln("outset vars : " + outSetVarList)
+          dprintln("inset  vars : " + inSetVarList)
+          dprintln("in int vars : " + inIntVarList)
+
+          val ruzicaStyleTask = bapa.ASTBAPASyn.Task(inSetVarList.map(_.name.toString), outSetVarList.map(_.name.toString), inIntVarList.map(_.name.toString), Nil, frml)
+
+          println(ruzicaStyleTask)
+
+          val (frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask)
+
+          println("And the formula for syntesis is.... " + frmForSynthesis)
+          println("  ")
+          println("Local out vars : " + linOutVars)
+          println("  ")
+          println("...and the assignments say: " + asss)
+
 
           super.transform(a)
             /*
@@ -551,8 +572,10 @@ trait ChooseTransformer
 
     // tries to extract a formula about (immutable) sets, possibly with
     // arithmetic stuff in it as well
-    def extractSetFormula(tree: Tree): Option[(bapa.ASTBAPASyn.Formula,Set[Symbol])] = {
-      var extractedSymbols: Set[Symbol] = Set.empty
+    // the first set contains the set variables we encountered, the second the integer variables
+    def extractSetFormula(tree: Tree): Option[(bapa.ASTBAPASyn.Formula,Set[Symbol],Set[Symbol])] = {
+      var extractedSetSymbols: Set[Symbol] = Set.empty
+      var extractedIntSymbols: Set[Symbol] = Set.empty
       case class EscapeException() extends Exception
       import bapa.ASTBAPASyn.{atom2formula}
 
@@ -589,7 +612,7 @@ trait ChooseTransformer
       def et(t: Tree): bapa.ASTBAPASyn.PAInt = t match {
         case ExIntLiteral(value) => bapa.ASTBAPASyn.IntConst(value)
         case ExIntIdentifier(id) => {
-          extractedSymbols = extractedSymbols + id.symbol
+          extractedIntSymbols = extractedIntSymbols + id.symbol
           bapa.ASTBAPASyn.IntVar(id.toString)
         }
         case ExPlus(l,r) => bapa.ASTBAPASyn.Plus(et(l), et(r))
@@ -607,6 +630,7 @@ trait ChooseTransformer
       def es(t: Tree): bapa.ASTBAPASyn.BASet = t match {
         case ExEmptySet() => bapa.ASTBAPASyn.EmptySet
         case ExSetIdentifier(id) => {
+          extractedSetSymbols = extractedSetSymbols + id.symbol
           bapa.ASTBAPASyn.SetVar(id.toString)
         }
         case ExUnion(l,r) => bapa.ASTBAPASyn.Union(es(l),es(r))
@@ -620,7 +644,7 @@ trait ChooseTransformer
 
       try {
         val res = ef(tree)
-        Some((res,extractedSymbols))
+        Some((res,extractedSetSymbols,extractedIntSymbols))
       } catch {
         case EscapeException() => None
       }
