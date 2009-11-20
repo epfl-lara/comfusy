@@ -5,7 +5,7 @@ object PrimeHeuristic {
     case 2 * k     => false
     case 3 * k     => false
     case 6 * k - 1 => true
-    case 6 * k + 1 => true
+//    case 6 * k + 1 => true
   }
 
   def main(args : Array[String]) : Unit = {
