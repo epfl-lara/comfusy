@@ -333,10 +333,13 @@ object Algorithm {
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): Unit = {
- /*   val ff = createFinalFormula(f, fQE, vars)
-    println("Now I call Mikael's procedure")
-    println("Hello world") */
+     val m1 = callArithmeticSynthesiser(x, y, k, k, vars, f, fQE)
+     var s = x
+     y.foreach(e => {
+       outputValuesofSet(e, s, m1, m)
+       s = e :: x
+     })
+     println("finished!")
   }
-
 
 }
