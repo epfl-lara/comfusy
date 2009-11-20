@@ -38,8 +38,14 @@ object Arithmetic {
   case class Min(terms: List[Term]) extends Term
 
   object And {
-    def apply(fs: List[Formula]): And = new And(fs)
-      def apply(left: Formula, right: Formula): And = (left,right) match {
+    def apply(fs: List[Formula]): Formula = fs match {
+      case Nil => True()
+      case f :: Nil => f
+      case fs if fs.contains(False()) => False()
+      case fs if fs.contains(True()) => And(fs.filter(_ != True()))
+      case _ => new And(fs)
+    }
+    def apply(left: Formula, right: Formula): Formula = (left,right) match {
       case (And(fs1),And(fs2)) => And(fs1 ::: fs2)
       case (And(fs), _) => And(fs ::: List(right))
       case (_, And(fs)) => And(left :: fs)
@@ -49,8 +55,14 @@ object Arithmetic {
       Some(and.formulas)
   }
   object Or {
-    def apply(fs: List[Formula]): Or = new Or(fs)
-      def apply(left: Formula, right: Formula): Or = (left,right) match {
+    def apply(fs: List[Formula]): Formula = fs match {
+      case Nil => False()
+      case f :: Nil => f
+      case fs if fs.contains(True()) => True()
+      case fs if fs.contains(False()) => Or(fs.filter(_ != False()))
+      case _ => new Or(fs)
+    }
+    def apply(left: Formula, right: Formula): Formula = (left,right) match {
       case (Or(fs1),Or(fs2)) => Or(fs1 ::: fs2)
       case (Or(fs), _) => Or(fs ::: List(right))
       case (_, Or(fs)) => Or(left :: fs)
@@ -69,6 +81,8 @@ object Arithmetic {
       case (Plus(ts1),Plus(ts2)) => Plus(ts1 ::: ts2)
       case (Plus(ts), _) => Plus(ts ::: List(right))
       case (_, Plus(ts)) => Plus(left :: ts)
+      case (IntLit(0), t) => t
+      case (t, IntLit(0)) => t
       case (_, _) => Plus(List(left,right))
     }
     def unapply(plus: Plus): Option[List[Term]] = 
@@ -84,6 +98,12 @@ object Arithmetic {
       case (Times(ts1),Times(ts2)) => Times(ts1 ::: ts2)
       case (Times(ts), _) => Times(ts ::: List(right))
       case (_, Times(ts)) => Times(left :: ts)
+      case (IntLit(0), _) => IntLit(0)
+      case (_, IntLit(0)) => IntLit(0)
+      case (IntLit(1), t) => t
+      case (t, IntLit(1)) => t
+      case (IntLit(-1), t) => Neg(t)
+      case (t, IntLit(-1)) => Neg(t)
       case (_, _) => Times(List(left,right))
     }
     def unapply(times: Times): Option[List[Term]] = 
@@ -289,6 +309,7 @@ object Arithmetic {
       def unapply(term: Term) : Option[(String,Int)] = term match {
         case IntLit(v) => Some(("", v))
         case Variable(nme) => Some((nme,1))
+        case Neg(Variable(nme)) => Some((nme,-1))
         case Times(IntLit(c) :: Variable(nme) :: Nil) => Some((nme,c))
         case Times(Variable(nme) :: IntLit(c) :: Nil) => Some((nme,c))
         case _ => None

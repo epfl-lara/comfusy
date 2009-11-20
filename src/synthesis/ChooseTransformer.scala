@@ -103,13 +103,18 @@ trait ChooseTransformer
 
           // We try to falsify the pre-condition.
           if(emitWarnings && paPrec != PASynthesis.PATrue()) {
-            isSat(Not(conditionToFormula(paPrec))) match {
-              case (Some(true), Some(ass)) => {
-                reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
+            // have to do this cause formula could be false in a semi-obvious way.
+            val myStyle = conditionToFormula(paPrec) 
+            if(myStyle != False()) {
+              dprintln("My-style: " + myStyle)
+              isSat(Not(myStyle)) match {
+                case (Some(true), Some(ass)) => {
+                  reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
 
+                }
+                case (Some(false), _) => ;
+                case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
               }
-              case (Some(false), _) => ;
-              case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
             }
           }
           
@@ -129,9 +134,13 @@ trait ChooseTransformer
             && cases.forall(cse => cse.guard == EmptyTree) => {
           //reporter.info(m.pos, "I'm inside a synth. PM expression.", true)
 
-          val scrutSym = currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
+          val scrutSym = selector match {
+            case i @ Ident(_) if i.symbol.isStable => i.symbol
+            case _ => currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
+          }
           val scrutName: String = scrutSym.name.toString
 
+          var patternConditionPairs: List[(Tree,Formula)] = Nil
           var encounteredNonArith: Boolean = false
           var allAreNotArith: Boolean = true
           val newCases = cases.map(cse => {
@@ -155,6 +164,8 @@ trait ChooseTransformer
                     dprintln(paStyle)
                     val (paPrec,paProg) = PASynthesis.solve(realOutVarList.map(PASynthesis.OutputVar(_)), paStyle)
 
+                    patternConditionPairs = (cse.pat, conditionToFormula(paPrec)) :: patternConditionPairs
+
                     var initialMap: SymbolMap = Map(scrutName -> scrutSym)
                     inVars.foreach(sym => {
                       initialMap = initialMap + (sym.name.toString -> sym)
@@ -166,15 +177,15 @@ trait ChooseTransformer
                       // values won't be used on this side
                       cse.body
                     } else {
-                      // this generates code that returns a tuple.
                       // we build new symbols
                       val newOutSyms = outVarSyms.map(s => 
                         currentOwner.newValue(s.pos, unit.fresh.newName(s.pos, s.name.toString)).setInfo(definitions.IntClass.tpe)
                       )
-                      val wcSyms = wildcards.toList.map(w =>
-                        currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "wc$")).setInfo(definitions.IntClass.tpe)
-                      )
+                      //val wcSyms = wildcards.toList.map(w =>
+                      //  currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "wc$")).setInfo(definitions.IntClass.tpe)
+                      //)
                       val symSubst = new TreeSymSubstituter(outVarSyms, newOutSyms)
+                      // this generates code that returns a tuple.
                       val computedTuple = symSubst(codeGen.programToCode(paPrec, paProg, false))
                       if (realOutVarList.size == 1) {
                         // we know it's not a wildcard, because of the check
@@ -229,11 +240,42 @@ trait ChooseTransformer
             return super.transform(m)
           }
 
-          val zeCode = Block(
+          if(emitWarnings) {
+            // checks for completeness
+            patternConditionPairs = patternConditionPairs.reverse
+            val compForm = Not(Or(patternConditionPairs.map(_._2)))
+            isSat(compForm) match {
+              case (Some(true), Some(ass)) => {
+                val assStr = variablesOf(compForm).toList.map(vn => vn + " = " + ass(vn)).mkString(", ")
+                reporter.info(m.pos, "Match is not exhaustive. It will fail for the values: " + assStr, true)
+              }
+              case (Some(false), _) => ; // means PM is exhaustive
+              case (None,_) => reporter.info(m.pos, "Match may not be exhaustive (decision procedure did not respond).", true)
+            }
+
+            // checks for reachability
+            var foundUnreachable = false
+            for(val c <- 0 until patternConditionPairs.size - 1) {
+              if(!foundUnreachable) {
+                val theOne = patternConditionPairs(c+1)
+                val reachForm = And(Not(Or(patternConditionPairs.take(c + 1).map(_._2))), theOne._2)
+                isSat(reachForm) match {
+                  case (Some(true), _) => ; // desirable, means pattern is reachable.
+                  case (Some(false), _) => reporter.info(theOne._1.pos, "Unreachable pattern.", true)
+                  case (None, _) => reporter.info(theOne._1.pos, "Pattern may be unreachable (decision procedure did not respond).", true)
+                }
+              }
+            }
+          }
+
+          val zeCode = selector match {
+            case i @ Ident(_) if i.symbol == scrutSym => Match(selector, newCases)
+            case _ => Block(
               ValDef(scrutSym, transform(selector))
               :: Nil,
               Match(Ident(scrutSym), newCases)
             )
+          }
 
           dprintln("******\n" + zeCode + "******")
 
@@ -263,9 +305,9 @@ trait ChooseTransformer
         }
         case Ident(nme.WILDCARD) => {
           wcCount = wcCount + 1
-          val wcName = "wildcard" + wcCount
+          val wcName = "wildcard$" + wcCount
           wildcards = wildcards + wcName
-          Variable("wildcard" + wcCount)
+          Variable("wildcard$" + wcCount)
         }
         case i @ Ident(nme) if i.symbol.isStable => {
           inSymbols = inSymbols + i.symbol
