@@ -1,19 +1,19 @@
 //	piskac@larapc01:~/guru$ pwd
 //	/home/piskac/guru
-//	piskac@larapc01:~/guru$ scalac -d bin/ src/guru/synthesis/*.scala
-//	piskac@larapc01:~/guru$ scala -cp bin/ guru.synthesis.Main
+//	piskac@larapc01:~/guru$ scalac -d bin/ src/synthesis/bapa/*.scala
+//	piskac@larapc01:~/guru$ scala -cp bin/ synthesis.bapa.Main
 
 
 
 
 
 
-package guru.synthesis
+package synthesis.bapa
 
 object Main  {
 
   def main(args : Array[String]): Unit = {
-    guru.synthesis.Examples.runExamples()
+    synthesis.bapa.Examples.runExamples()
   }
 }
 

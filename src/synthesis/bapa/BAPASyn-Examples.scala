@@ -1,6 +1,6 @@
-package guru.synthesis
+package synthesis.bapa
 
-import guru.synthesis.Printer._
+import synthesis.bapa.Printer._
 
 
 object Examples {
@@ -29,16 +29,16 @@ object Examples {
     def run (name: String, t: Task): Unit = t match {
       case Task(x, y, k, l, f) => {
         print_Task(t)
-        val f1 = guru.synthesis.Algorithm.step1(f)
+        val f1 = synthesis.bapa.Algorithm.step1(f)
         print_BAPAFormula(f1)
         println(" ")
-        val (f2, mAll, vars) = guru.synthesis.Algorithm.step2and3(f1, x ::: y)
+        val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
         print_BAPAFormula(f2)
         println(" ")
-        val f3 = guru.synthesis.Algorithm.step4(mAll, x)
+        val f3 = synthesis.bapa.Algorithm.step4(mAll, x)
         print_BAPAFormula(f3)
         println(" ")
-        guru.synthesis.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+        synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
      }
      println("finished!")
    }

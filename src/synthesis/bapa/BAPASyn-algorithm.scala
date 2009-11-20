@@ -1,4 +1,4 @@
-package guru.synthesis
+package synthesis.bapa
 
 import scala.collection.mutable.Map
 import scala.collection.immutable.Set
@@ -333,9 +333,9 @@ object Algorithm {
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): Unit = {
-    val ff = createFinalFormula(f, fQE, vars)
+ /*   val ff = createFinalFormula(f, fQE, vars)
     println("Now I call Mikael's procedure")
-    println("Hello world")
+    println("Hello world") */
   }
 
 

@@ -1,4 +1,4 @@
-package guru.synthesis
+package synthesis.bapa
 
 
 object Printer {

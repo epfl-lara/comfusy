@@ -1,4 +1,4 @@
-package guru.synthesis
+package synthesis.bapa
 
   sealed abstract class PAInt
   case class IntVar(val i: String) extends PAInt
