@@ -14,9 +14,9 @@ trait ChooseTransformer
   import global._
 
   private val SHOWDEBUGINFO = false
-  private def dprintln(str: String): Unit = {
+  private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
-      println(str)
+      println(str.toString)
   }
 
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
@@ -120,14 +120,14 @@ trait ChooseTransformer
           })
           val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
           typer.typed(atOwner(currentOwner) {
-            codeGen.programToCode(paPrec, paProg) 
+            codeGen.programToCode(paPrec, paProg, true) 
           })
         }
 
         case m @ Match(selector, cases)
           if isSubType(selector.tpe, definitions.IntClass.tpe)
             && cases.forall(cse => cse.guard == EmptyTree) => {
-          reporter.info(m.pos, "I'm inside a synth. PM expression.", true)
+          //reporter.info(m.pos, "I'm inside a synth. PM expression.", true)
 
           val scrutSym = currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
           val scrutName: String = scrutSym.name.toString
@@ -143,23 +143,71 @@ trait ChooseTransformer
                 }
                 val frm = normalized(Equals(formula, Variable(scrutName)))
                 
-                val realOutVarSet = outVars.map(_.name.toString) ++ wildcards
+                val outVarSyms: List[Symbol] = outVars.toList
+                val realOutVarList: List[String] = outVarSyms.map(_.name.toString) ::: wildcards.toList
+                val realOutVarSet: Set[String] = Set.empty ++ realOutVarList
 
                 formulaToPAFormula(frm, realOutVarSet) match {
-                  case Some(f) => {
+                  case Some(f) => { // means the formula was linear arithmetic
+                                    // and could be transformed to Mikael's format
                     val paStyle: PASynthesis.PAFormula = f
-                    println(frm)
-                    println(paStyle)
-                    val outputVariableList = realOutVarSet.toList
-                    val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyle)
-                    println("In:   " + inVars)
-                    println("Out:  " + outVars)
-                    println("Wild: " + wildcards)
-                    println("Prec: " + paPrec)
-                    println("Prog: " + paProg)
+                    dprintln(frm)
+                    dprintln(paStyle)
+                    val (paPrec,paProg) = PASynthesis.solve(realOutVarList.map(PASynthesis.OutputVar(_)), paStyle)
+
+                    var initialMap: SymbolMap = Map(scrutName -> scrutSym)
+                    inVars.foreach(sym => {
+                      initialMap = initialMap + (sym.name.toString -> sym)
+                    })
+                    val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, cse.pat.pos)
+                    val generatedCode: Tree = if(outVars.isEmpty) {
+                      // note that we ignore the case where we only have to
+                      // generate code for the wildcards, since we know their
+                      // values won't be used on this side
+                      cse.body
+                    } else {
+                      // this generates code that returns a tuple.
+                      // we build new symbols
+                      val newOutSyms = outVarSyms.map(s => 
+                        currentOwner.newValue(s.pos, unit.fresh.newName(s.pos, s.name.toString)).setInfo(definitions.IntClass.tpe)
+                      )
+                      val wcSyms = wildcards.toList.map(w =>
+                        currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "wc$")).setInfo(definitions.IntClass.tpe)
+                      )
+                      val symSubst = new TreeSymSubstituter(outVarSyms, newOutSyms)
+                      val computedTuple = symSubst(codeGen.programToCode(paPrec, paProg, false))
+                      if (realOutVarList.size == 1) {
+                        // we know it's not a wildcard, because of the check
+                        // above. We only have to assign it, since the symbol
+                        // was in the binder, it should be the same in the
+                        // expression to the right.
+                        Block(
+                          ValDef(newOutSyms.head, computedTuple) :: Nil,
+                          symSubst(cse.body)
+                        )
+                      } else {
+                        val outVarCount = outVarSyms.size
+                        val tupleHolderSym = currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "t")).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
+                        
+                        Block(
+                          ValDef(tupleHolderSym, computedTuple) :: (
+                          for(val c <- 0 until outVarCount) yield 
+                            ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1))))
+                          ).toList, // :::
+//                          for(val c <- 0 until wcSyms.size) :: (
+//                            ValDef(wcSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1+outVarCount))))
+//                          ).toList,
+                          symSubst(cse.body)
+                        )
+                      }
+                    }
 
                     // build the new casedef
-                    cse
+                    CaseDef(
+                      Ident(nme.WILDCARD), // always matches on anything...
+                      codeGen.conditionToCode(initialMap, paPrec), // ...guard does the job
+                      generatedCode
+                    )
                   }
                   case None => {
                     encounteredNonArith = true
@@ -181,12 +229,16 @@ trait ChooseTransformer
             return super.transform(m)
           }
 
-          typer.typed(atOwner(currentOwner) {
-            Block(
+          val zeCode = Block(
               ValDef(scrutSym, transform(selector))
               :: Nil,
               Match(Ident(scrutSym), newCases)
             )
+
+          dprintln("******\n" + zeCode + "******")
+
+          typer.typed(atOwner(currentOwner) {
+            zeCode
           })
         }
 

@@ -29,10 +29,10 @@ trait CodeGeneration {
       Ident(map(varNme))
     }
   
-    def programToCode(prec: PACondition, prog: PAProgram): Tree = 
-      programToCode(initialMap, prec, prog)
+    def programToCode(prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree = 
+      programToCode(initialMap, prec, prog, withPrec)
 
-    def programToCode(initMap: SymbolMap, prec: PACondition, prog: PAProgram): Tree = {
+    def programToCode(initMap: SymbolMap, prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree = {
       var map: SymbolMap = initMap
 
       val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
@@ -44,7 +44,7 @@ trait CodeGeneration {
         return throwTree // trick so that the code still typechecks
       }
 
-      val preCheckCode: List[Tree] = if(prec.global_condition != PATrue()) {
+      val preCheckCode: List[Tree] = if(withPrec && prec.global_condition != PATrue()) {
         List(If(Select(conditionToCode(map,prec), nme.UNARY_!), throwTree, EmptyTree))
       } else {
         Nil
@@ -71,7 +71,7 @@ trait CodeGeneration {
 
         // generates the big case split (hopefully)
         val bigIteExpr: Tree = prog.case_splits.programs.foldRight[Tree](throwTree)((condProgPair: (PACondition,PAProgram), rest: Tree) => {
-          If(conditionToCode(map, condProgPair._1), programToCode(map, PACondition(Nil,PATrue()), condProgPair._2), rest) 
+          If(conditionToCode(map, condProgPair._1), programToCode(map, PACondition(Nil,PATrue()), condProgPair._2, false), rest) 
         })
 
         if (valCount == 1) {
