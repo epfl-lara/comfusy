@@ -36,6 +36,7 @@ object ASTBAPASyn {
   case class Take(setName: String, firstCount: PAInt, fromSet: BASet) extends SetAssignment
   case class Simple(setName: String, fromSet: BASet) extends SetAssignment
 
+
 // =============================
 
 
@@ -44,16 +45,45 @@ object ASTBAPASyn {
     def f2f(f: Formula): Arithmetic.Formula = f match {
       case And(f1, f2) => Arithmetic.And(f2f(f1), f2f(f2))
       case Or(f1, f2) => Arithmetic.Or(f2f(f1), f2f(f2))
-      case class Not(f)  => Arithmetic.Not(f2f(f1))
-      case class FAtom(a) => bapaAtoArithForm(a)
+      case Not(f1) => Arithmetic.Not(f2f(f1))
+      case FAtom(a) => bapaAtomArithForm(a)
     }
     f2f(form)
   }
 
-  def bapaAtoArithForm(a: Atom): Arithmetic.Formula = {
-
+  def bapaAtomArithForm(a: Atom): Arithmetic.Predicate = a match {
+    case IntEqual(i1, i2) => {
+      val i1n = bapaInttoArithInt(i1)
+      val i2n = bapaInttoArithInt(i2)
+       Arithmetic.Equals(i1n, i2n)
+    }
+    case IntLessEqual(i1, i2) => {
+      val i1n = bapaInttoArithInt(i1)
+      val i2n = bapaInttoArithInt(i2)
+      Arithmetic.LessThan(i1n, i2n)
+    }
+    case IntDivides(c, i) => {
+      val i1n = bapaInttoArithInt(i)
+      Arithmetic.Equals(Arithmetic.Modulo(i1n, Arithmetic.IntLit(c)), Arithmetic.IntLit(0))
+    }
+    case _ => scala.Predef.error("Not arithmetic formula !!! ")
   }
-     case _ => scala.Predef.error("Not arithmetic formula !!! " + f)
+
+
+  def bapaInttoArithInt(i: PAInt): Arithmetic.Term = i match {
+    case IntVar(v) => Arithmetic.Variable(v)
+    case IntConst(c) => Arithmetic.IntLit(c)
+    case Plus(i1, i2) => {
+      val i1n = bapaInttoArithInt(i1)
+      val i2n = bapaInttoArithInt(i2)
+      Arithmetic.Plus(List(i1n, i2n))
+    }
+    case Times(c, i1) => {
+      val i1n = bapaInttoArithInt(i1)
+      Arithmetic.Times(List(Arithmetic.IntLit(c), i1n))
+    }
+    case _ => scala.Predef.error("Not arithmetic formula !!! ")
+  }
 
 
 

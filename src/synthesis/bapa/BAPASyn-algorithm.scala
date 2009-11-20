@@ -333,12 +333,22 @@ object Algorithm {
 // ------------- Step 5
 
 
-  // k - list of input var. names, l - list of output var. names
-  // f - formula result of translation,  fQE - formula result of "quantifier elimination"
-  // return map that  has keeps values of l, vars
-  def callArithmeticSynthesiser(k: List[String], l: List[String], vars: List[String], f: Formula, fQE: Formula): Map[String, PAInt] = {
-       //NNNNNN = synthesis.PASynthesis.solve()
-       Map.empty[String,PAInt]
+  def createFormulaToCallSynthesiser(vars: List[String], f: Formula, fQE: Formula): Formula = {
+    var f1 = And(f, fQE)
+    vars.foreach(v => { 
+      val ft = FAtom(IntLessEqual(IntConst(0), IntVar(v)))
+      f1 = And(ft, f1)
+    })
+    f1
+  }
+
+
+
+  def callArithmeticSynthesiser(inputVars: List[String], outputVars: List[String], f: Formula): Map[String, PAInt] = {
+// do something, good man
+// it should return something like (variable -> NameUnderWhichWasCalled)
+// for example: val h00Var = {... code generating its value...}
+// then h000 -> IntVar(h00Var)
   }
 
 
@@ -365,7 +375,7 @@ object Algorithm {
   def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): 
    (Int, List[SetAssignment]) = {
 // e - output set variable who we are defining here
-// s - already known set variables, hValues - values of h variables, 
+// s - already known set variables, hValues - values of h variables (h00 -> SetVar(h00V), etc.) 
 // vRegions - aready existing a map saying which Venn region is contained in a set
 // counting added sets
     val l = createListOfVennRegions(s)
@@ -411,7 +421,8 @@ object Algorithm {
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): List[SetAssignment] = {
-     val m1 = callArithmeticSynthesiser(k, l, vars, f, fQE)
+     val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
+     val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
      var s = x
      var listOfAssignments: List[SetAssignment] = Nil 
      var i = 0

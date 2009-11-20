@@ -6,8 +6,6 @@
 
 
 
-import ASTBAPASyn._
-
 package synthesis.bapa
 
 object Main  {
