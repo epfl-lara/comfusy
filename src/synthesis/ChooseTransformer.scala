@@ -317,17 +317,25 @@ trait ChooseTransformer
 
           val (frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask)
 
-          println("And the formula for syntesis is.... " + frmForSynthesis)
-          println("  ")
-          println("Local out vars : " + linOutVars)
-          println("  ")
-          println("...and the assignments say: " + asss)
+          dprintln("And the formula for syntesis is.... " + frmForSynthesis)
+          dprintln("  ")
+          dprintln("Local out vars : " + linOutVars)
+          dprintln("  ")
+          dprintln("...and the assignments say: " + asss)
+          dprintln("  ")
+          dprintln(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
 
-          println("  ")
-          println(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
+          val preliminaryCardAssigns: List[Tree] = Nil
 
 
-          super.transform(a)
+          typer.typed(atOwner(currentOwner) {
+            Block(
+              preliminaryCardAssigns ::: Nil,
+              a
+            )
+          })
+
+          //super.transform(a)
             /*
           // EXTRACTION
           val (extractedFormula,extractedSymbols) =

@@ -30,4 +30,15 @@ object Definitions {
   object - {
     def unapply(i: Int): Option[(Int,Int)] = extractorNotRewritten
   }
+
+  // Function that builds a set by taking a subset of an existing one.
+  import scala.collection.immutable.Set
+  def take[A](n: Int, from: Set[A]): Set[A] = {
+    if (from.size < n) {
+      throw new java.lang.IllegalArgumentException("set is too small")
+    } else {
+      var c: Int = 0
+      Set.empty[A] ++ from.takeWhile(x => { c = c + 1; c <= n })
+    }
+  }
 }
