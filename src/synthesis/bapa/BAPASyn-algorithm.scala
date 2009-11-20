@@ -329,8 +329,13 @@ object Algorithm {
 
 // ------------- Step 5
 
-  def callArithmeticSynthesiser(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
-   f: Formula, fQE: Formula): Map[String, PAInt] = {
+
+
+  def callArithmeticSynthesiser(k: List[String], l: List[String], vars: List[String], f: Formula, fQE: Formula): Map[String, PAInt] = {
+// k - input, l, vars  - output
+// f - formula result of translation,  fQE - formula result of "quantifier elimination"
+// return map that  has keeps values of l, vars
+
        NNNNNN = synthesis.PASynthesis.solve()
   }
 
@@ -391,7 +396,7 @@ object Algorithm {
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): Unit = {
-     val m1 = callArithmeticSynthesiser(x, y, k, k, vars, f, fQE)
+     val m1 = callArithmeticSynthesiser(k, l, vars, f, fQE)
      var s = x
      var i = 0
      y.foreach(e => {
