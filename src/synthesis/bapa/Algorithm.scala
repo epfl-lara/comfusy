@@ -343,9 +343,13 @@ object Algorithm {
   }
 
 
-  def mapConnectingVariabes(outputVars: List[String], f: Formula): Map[String, PAInt] = {
-
-
+  def mapConnectingVariabes(vars: List[String]): Map[String, PAInt] = {
+    val tm = Map[String, PAInt]()
+    vars.foreach(e => {
+      val pie = IntVar(e)
+      tm += (e -> pie)
+    })
+    tm
   }
 
 
