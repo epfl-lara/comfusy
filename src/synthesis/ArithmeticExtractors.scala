@@ -6,7 +6,7 @@ trait ArithmeticExtractors {
   import global._
   import global.definitions._
 
-  import scala.collection.mutable.Set
+  //import scala.collection.mutable.Set
 
   object ExTrueLiteral {
     def unapply(tree: Tree): Boolean = tree match {
@@ -140,6 +140,70 @@ trait ArithmeticExtractors {
     def unapply(tree: Tree): Option[Tree] = tree match {
       case Select(t, n) if (n == nme.UNARY_-) => Some(t)
       case _ => None
+    }
+  }
+
+  // extractors for set expressions
+  object ExSubsetOf {
+    def unapply(tree: Tree): Option[(Tree,Tree)] = tree match {
+      case Apply(Select(lhs, n), List(rhs)) if (n.toString == "subsetOf") => Some((lhs,rhs))
+      case _ => None
+    }
+  }
+
+  object ExSetCard {
+    def unapply(tree: Tree): Option[Tree] = tree match {
+      case Select(t, n) if (n.toString == "size") => Some(t)
+      case _ => None
+    }
+  }
+
+  object ExUnion {
+    def unapply(tree: Tree): Option[(Tree,Tree)] = tree match {
+      case Apply(Select(lhs, n), List(rhs)) if (n == nme.PLUSPLUS) => Some((lhs,rhs))
+      case _ => None
+    }
+  }
+
+  object ExIntersection {
+    def unapply(tree: Tree): Option[(Tree,Tree)] = tree match {
+      case Apply(Select(lhs, n), List(rhs)) if (n == encode("**")) => Some((lhs,rhs))
+      case _ => None
+    }
+  }
+
+  object ExSetMinus {
+    def unapply(tree: Tree): Option[(Tree,Tree)] = tree match {
+      case Apply(Select(lhs, n), List(rhs)) if (n == encode("--")) => Some((lhs,rhs))
+      case _ => None
+    }
+  }
+
+  private lazy val setTraitSym = definitions.getClass("scala.collection.immutable.Set")
+
+  object ExSetIdentifier {
+    def unapply(tree: Tree): Option[Ident] = tree match {
+      case i: Ident => i.symbol.tpe match {
+          case TypeRef(_,sym,_) if sym == setTraitSym => Some(i)
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
+  object ExEmptySet {
+    def unapply(tree: Tree): Boolean = tree match {
+      case TypeApply(
+        Select(
+          Select(
+            Select(
+              Select(Ident(s), collectionName),
+              immutableName),
+            setName),
+          emptyName),  _ :: Nil) => {
+          collectionName.toString == "collection" && immutableName.toString == "immutable" && setName.toString == "Set" && emptyName.toString == "empty"
+        }
+      case _ => false
     }
   }
 

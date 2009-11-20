@@ -20,6 +20,7 @@ trait ChooseTransformer
   }
 
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
+  private lazy val immutableSetTraitSymbol = definitions.getClass("scala.collection.immutable.Set")
 
   /** The actual rewriting function is the following. */
   def transformChooseCalls(unit: CompilationUnit, emitWarnings: Boolean): Unit =
@@ -28,7 +29,7 @@ trait ChooseTransformer
   class ChooseTransformer(unit: CompilationUnit, val emitWarnings: Boolean) extends TypingTransformer(unit) {
     override def transform(tree: Tree): Tree = {
       tree match {
-        case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
+        case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && predicate.vparams(0).tpt.tpe == definitions.IntClass.tpe) => {
           // SANITY CHECKS
           var foundErrors = false
           // DEBUG reporter.info(a.pos, "here!", true) 
@@ -36,14 +37,14 @@ trait ChooseTransformer
 
           // we check that we're only synthesizing integers, and collect the
           // set of input variables
-          for (val valDef <- funValDefs) {
-            if(valDef.tpt.tpe != definitions.IntClass.tpe) {
-              reporter.error(valDef.pos, "unsupported type in call to synthesizer: " + valDef.tpt.tpe)
-              foundErrors = true
-            }
-          }
-          if (foundErrors)
-            return a
+          // for (val valDef <- funValDefs) {
+          //   if(valDef.tpt.tpe != definitions.IntClass.tpe) {
+          //     reporter.error(valDef.pos, "unsupported type in call to synthesizer: " + valDef.tpt.tpe)
+          //     foundErrors = true
+          //   }
+          // }
+          // if (foundErrors)
+          //   return a
 
           // for the record
           val outputVariableList = funValDefs.map(_.name.toString)
@@ -268,7 +269,7 @@ trait ChooseTransformer
             }
           }
 
-          val zeCode = selector match {
+          val theCode = selector match {
             case i @ Ident(_) if i.symbol == scrutSym => Match(selector, newCases)
             case _ => Block(
               ValDef(scrutSym, transform(selector))
@@ -277,11 +278,140 @@ trait ChooseTransformer
             )
           }
 
-          dprintln("******\n" + zeCode + "******")
-
           typer.typed(atOwner(currentOwner) {
-            zeCode
+            theCode
           })
+        }
+
+        // most likely the ugliest match case you ever encountered.
+        case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && (predicate.vparams(0).tpt.tpe match { case TypeRef(_,sym,_) if (sym == immutableSetTraitSymbol) => true case _ => false })) => {
+          reporter.info(predicate.pos, "in a set choose !!!", true)
+
+          // SANITY CHECKS
+          var foundErrors = false
+          val Function(funValDefs, funBody) = predicate
+
+          // for the record
+          val outputVariableList = funValDefs.map(_.name.toString)
+
+          val frml: bapa.ASTBAPASyn.Formula = extractSetFormula(funBody) match {
+            case Some((p,_)) => p
+            case None => {
+              foundErrors = true
+              bapa.ASTBAPASyn.LikeFalse
+            }
+          }
+          println(frml)
+
+          super.transform(a)
+            /*
+          // EXTRACTION
+          val (extractedFormula,extractedSymbols) =
+           extractFormula(funBody) match {
+            case Some((f,s)) => (normalized(f), s.filter((sym: Symbol) => !outputVariableList.contains(sym.name.toString)))
+            case None => {
+              foundErrors = true
+              (False(),Set.empty[Symbol])
+            }
+          }
+          if (foundErrors)
+            return a
+
+          dprintln("Corresponding formula: " + extractedFormula)
+          dprintln("Symbols in there     : " + extractedSymbols)
+
+          // LINEARIZATION
+          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
+            case Some(f) => f
+            case None => {
+              reporter.error(funBody.pos, "predicate is not in linear arithmetic")
+              foundErrors = true
+              PASynthesis.PAFalse()
+            }
+          }
+          if (foundErrors) {
+            return a
+          }
+
+          // We check for uniqueness of the solution.
+          if(emitWarnings) {
+            val outVars = Set.empty ++ outputVariableList
+            val (fcopy,toMap,fromMap) = renameVarSet(extractedFormula, outVars)
+            val diseqs: List[Formula] = toMap.map(p => NotEquals(Variable(p._1), Variable(p._2))).toList
+            val completeFormula = And(extractedFormula :: fcopy :: diseqs)
+            isSat(completeFormula) match {
+              case (Some(true), Some(ass)) => {
+                var wm = "Synthesis predicate has multiple solutions for variable assignment: "
+                wm = wm + ass.keys.filter(k => !toMap.keys.contains(k) && !fromMap.keys.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
+                wm = wm + "\n"
+                wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
+                wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
+                reporter.info(a.pos, wm, true)
+              }
+              case (Some(false), _) => ; // desirable: solution is always unique if it exists
+              case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always have a unique solution (decision procedure did not respond).", true)
+            }
+          }
+
+          dprintln("Mikael-Style formula : " + paStyleFormula)
+          val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
+          dprintln("Precondition         : " + paPrec)
+          dprintln("Program              : " + paProg)
+
+          // We try to falsify the pre-condition.
+          if(emitWarnings && paPrec != PASynthesis.PATrue()) {
+            // have to do this cause formula could be false in a semi-obvious way.
+            val myStyle = conditionToFormula(paPrec) 
+            if(myStyle != False()) {
+              dprintln("My-style: " + myStyle)
+              isSat(Not(myStyle)) match {
+                case (Some(true), Some(ass)) => {
+                  reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
+
+                }
+                case (Some(false), _) => ;
+                case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
+              }
+            }
+          }
+          
+          // CODE GENERATION
+          var initialMap: SymbolMap = Map.empty
+          extractedSymbols.foreach(sym => {
+            initialMap = initialMap + (sym.name.toString -> sym)
+          })
+          val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
+          typer.typed(atOwner(currentOwner) {
+            codeGen.programToCode(paPrec, paProg, true) 
+          })
+*/
+        } 
+
+        case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
+          /*
+          val tpe = predicate.vparams(0).tpt.tpe
+          val TypeRef(_,sym,args) = tpe
+          println(sym)  // : Symbol
+          println(args) // : List[Type]
+          println("***")
+          val immModule = definitions.getModule("scala.collection.immutable")
+          val setTrait  = definitions.getMember(immModule, "Set")
+          println(immModule)
+          println(immModule.tpe)
+          println(setTrait)
+          println(setTrait.tpe)
+          val setTrait2 = definitions.getClass("scala.collection.immutable.Set")
+          println(setTrait2)
+          println(setTrait2.tpe)
+          println("***")
+          println(sym == setTrait2)
+          args(0) match {
+            case TypeRef(_, ss, Nil) if ss == definitions.getClass("scala.Predef.String") => println("yes yes yes yes")
+          }
+          
+          */
+          reporter.error(predicate.vparams.head.pos, "Unsupported type in call to ``choose''.")
+          super.transform(a)
         }
 
         case _ => super.transform(tree)
@@ -414,6 +544,83 @@ trait ChooseTransformer
 
       try {
         Some(f2paf(formula))
+      } catch {
+        case EscapeException() => None
+      }
+    }
+
+    // tries to extract a formula about (immutable) sets, possibly with
+    // arithmetic stuff in it as well
+    def extractSetFormula(tree: Tree): Option[(bapa.ASTBAPASyn.Formula,Set[Symbol])] = {
+      var extractedSymbols: Set[Symbol] = Set.empty
+      case class EscapeException() extends Exception
+      import bapa.ASTBAPASyn.{atom2formula}
+
+      def ef(t: Tree): bapa.ASTBAPASyn.Formula = t match {
+        case ExAnd(l,r) => bapa.ASTBAPASyn.And(ef(l), ef(r))
+        case ExOr(l,r) => bapa.ASTBAPASyn.Or(ef(l), ef(r))
+        case ExNot(f) => bapa.ASTBAPASyn.Not(ef(f))
+        case ExEquals(l,r) => {
+          if(l.tpe == definitions.IntClass.tpe) {
+            bapa.ASTBAPASyn.IntEqual(et(l), et(r))
+          } else {
+            bapa.ASTBAPASyn.SetEqual(es(l), es(r))
+          }
+        }
+        case ExNotEquals(l,r) => {
+          bapa.ASTBAPASyn.Not(
+            if(l.tpe == definitions.IntClass.tpe) {
+              bapa.ASTBAPASyn.IntEqual(et(l), et(r))
+            } else {
+              bapa.ASTBAPASyn.SetEqual(es(l), es(r))
+            })
+        }
+        case ExLessThan(l,r) => bapa.ASTBAPASyn.IntLessEqual(bapa.ASTBAPASyn.Plus(bapa.ASTBAPASyn.IntConst(1), et(l)), et(r))
+        case ExLessEqThan(l,r) => bapa.ASTBAPASyn.IntLessEqual(et(l), et(r))
+        case ExGreaterThan(l,r) => bapa.ASTBAPASyn.IntLessEqual(bapa.ASTBAPASyn.Plus(bapa.ASTBAPASyn.IntConst(1), et(r)), et(l))
+        case ExGreaterEqThan(l,r) =>  bapa.ASTBAPASyn.IntLessEqual(et(r), et(l))
+        case ExSubsetOf(l,r) => bapa.ASTBAPASyn.SetSubset(es(l), es(r))
+        case _ => {
+          reporter.error(t.pos, "invalid expression in sythesis predicate")
+          throw EscapeException()
+        }
+      }
+
+      def et(t: Tree): bapa.ASTBAPASyn.PAInt = t match {
+        case ExIntLiteral(value) => bapa.ASTBAPASyn.IntConst(value)
+        case ExIntIdentifier(id) => {
+          extractedSymbols = extractedSymbols + id.symbol
+          bapa.ASTBAPASyn.IntVar(id.toString)
+        }
+        case ExPlus(l,r) => bapa.ASTBAPASyn.Plus(et(l), et(r))
+        case ExMinus(l,r) => bapa.ASTBAPASyn.Plus(et(l), bapa.ASTBAPASyn.Times(-1, et(r)))
+        case ExTimes(ExIntLiteral(coef),r) => bapa.ASTBAPASyn.Times(coef, et(r))
+        case ExTimes(l,ExIntLiteral(coef)) => bapa.ASTBAPASyn.Times(coef, et(l))
+        case ExNeg(t) => bapa.ASTBAPASyn.Times(-1, et(t))
+        case ExSetCard(s) => bapa.ASTBAPASyn.Card(es(s))
+        case _ => {
+          reporter.error(t.pos, "invalid integer term in synthesis predicate")
+          throw EscapeException()
+        }
+      }
+
+      def es(t: Tree): bapa.ASTBAPASyn.BASet = t match {
+        case ExEmptySet() => bapa.ASTBAPASyn.EmptySet
+        case ExSetIdentifier(id) => {
+          bapa.ASTBAPASyn.SetVar(id.toString)
+        }
+        case ExUnion(l,r) => bapa.ASTBAPASyn.Union(es(l),es(r))
+        case ExIntersection(l,r) => bapa.ASTBAPASyn.Intersec(es(l),es(r))
+        case ExSetMinus(l,r) => bapa.ASTBAPASyn.Intersec(es(l), bapa.ASTBAPASyn.Compl(es(r)))
+        case _ => {
+          reporter.error(t.pos, "invalid set term in synthesis predicate")
+          throw EscapeException()
+        }
+      }
+
+      try {
+        val res = ef(tree)
+        Some((res,extractedSymbols))
       } catch {
         case EscapeException() => None
       }
