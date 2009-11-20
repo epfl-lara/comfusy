@@ -360,37 +360,50 @@ object Algorithm {
     }
   }
 
-  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): (Int, List[SetAssignment]) = {
+  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): 
+   (Int, List[SetAssignment]) = {
+// e - output set variable who we are defining here
+// s - already known set variables, hValues - values of h variables, 
+// vRegions - aready existing a map saying which Venn region is contained in a set
+// counting added sets
     val l = createListOfVennRegions(s)
     var k = i
     var listOfSets: List[String] = Nil
+    var listOfAssigments: List[SetAssignment] = Nil 
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
        val dj = evaluateValuesofExpressions(j1, hValues)
-       if (!(dj == IntConst(0))) {
-         val nsv = "K" + j
-         listOfSets = nsv :: listOfSets
-         k = k + 1
-         if (dj == Card(j)) {
-            print("val " + nsv + " = ")
-            synthesis.bapa.Printer.print_Set(j)
-            println(" ")
-         } else {
-            print("val " + nsv + " = first(")
-            synthesis.bapa.Printer.print_Int(dj)
-            print(", ")
-            synthesis.bapa.Printer.print_Set(j)
-            println(" ")
-         }
-      }
+       val nsv = "K$" + k
+       listOfSets = nsv :: listOfSets
+       k = k + 1
+       val t = Take(nsv, dj, j)
+       listOfAssigments = t :: listOfAssigments
     })
-    if (!(listOfSets.isEmpty)) {
-      print("val " + e + " = " + listOfSets.head)
-      val t = listOfSets.tail
-      t.foreach(w => print(" UNION ") + w)
-      println(" ")
+    if (!(listOfSets.length == 0)) {
+      if (listOfSets.length == 1) {
+        val t = Simple(e, SetVar(listOfSets.head))
+        listOfAssigments = t :: listOfAssigments
+      } else {
+        val s1 = listOfSets(0)
+        val s2 = listOfSets(1)
+        val lsn = listOfSets.drop(2)
+        val nsv = "K$" + k
+        var sOld = nsv
+        k = k + 1
+        val t1 = Simple(nsv, Union(SetVar(s1), SetVar(s2)))
+        listOfAssigments = t1 :: listOfAssigments
+        lsn.foreach(u => {
+          val nsv1 = "K$" + k
+          k = k + 1
+          val t2 = Simple(nsv1, Union(SetVar(u), SetVar(sOld)))
+          sOld = nsv1
+          listOfAssigments = t2 :: listOfAssigments
+        })
+        val t3 = Simple(e, SetVar(sOld))
+        listOfAssigments = t3 :: listOfAssigments
+      }
     }
-    k
+    (k, listOfAssigments)
   }
 
 
@@ -398,12 +411,15 @@ object Algorithm {
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): List[SetAssignment] = {
      val m1 = callArithmeticSynthesiser(k, l, vars, f, fQE)
      var s = x
+     var listOfAssignments: List[SetAssignment] = Nil 
      var i = 0
      y.foreach(e => {
-       i = outputValuesofSet(e, s, m1, m, i)
+       val (j, tl) = outputValuesofSet(e, s, m1, m, i)
+       listOfAssignments = listOfAssignments ::: tl
        s = e :: x
+       i = j
      })
-     println("finished!")
+     listOfAssignments
   }
 
 }
