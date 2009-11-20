@@ -4,8 +4,6 @@ import scala.collection.mutable.Map
 import scala.collection.immutable.Set
 import java.lang.Integer
 
-
-
 object Algorithm {
 
 // -------------- Step 1
@@ -359,7 +357,7 @@ object Algorithm {
 
   def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): Int = {
     val l = createListOfVennRegions(s)
-    var j = i
+    var k = i
     var listOfSets: List[String] = Nil
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
@@ -367,7 +365,7 @@ object Algorithm {
        if (!(dj == IntConst(0))) {
          val nsv = "K" + j
          listOfSets = nsv :: listOfSets
-         j = j + 1
+         k = k + 1
          if (dj == Card(j)) {
             print("val " + nsv + " = ")
             synthesis.bapa.Printer.print_Set(j)
@@ -387,7 +385,7 @@ object Algorithm {
       t.foreach(w => print(" UNION ") + w)
       println(" ")
     }
-    j
+    k
   }
 
 
