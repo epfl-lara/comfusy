@@ -36,12 +36,25 @@ object ASTBAPASyn {
   case class Take(setName: String, firstCount: PAInt, fromSet: BASet) extends SetAssignment
   case class Simple(setName: String, fromSet: BASet) extends SetAssignment
 
+// =============================
+
+
+
   def bapaFormToArithForm(form: Formula): Arithmetic.Formula = {
     def f2f(f: Formula): Arithmetic.Formula = f match {
       case And(f1, f2) => Arithmetic.And(f2f(f1), f2f(f2))
-      //...
-      case _ => scala.Predef.error("Not arithmetic formula !!! " + f)
+      case Or(f1, f2) => Arithmetic.Or(f2f(f1), f2f(f2))
+      case class Not(f)  => Arithmetic.Not(f2f(f1))
+      case class FAtom(a) => bapaAtoArithForm(a)
     }
     f2f(form)
   }
+
+  def bapaAtoArithForm(a: Atom): Arithmetic.Formula = {
+
+  }
+     case _ => scala.Predef.error("Not arithmetic formula !!! " + f)
+
+
+
 }
