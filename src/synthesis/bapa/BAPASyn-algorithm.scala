@@ -331,10 +331,10 @@ object Algorithm {
 
 
 
+  // k - list of input var. names, l - list of output var. names
+  // f - formula result of translation,  fQE - formula result of "quantifier elimination"
+  // return map that  has keeps values of l, vars
   def callArithmeticSynthesiser(k: List[String], l: List[String], vars: List[String], f: Formula, fQE: Formula): Map[String, PAInt] = {
-// k - input, l, vars  - output
-// f - formula result of translation,  fQE - formula result of "quantifier elimination"
-// return map that  has keeps values of l, vars
 
        NNNNNN = synthesis.PASynthesis.solve()
   }
@@ -360,7 +360,7 @@ object Algorithm {
     }
   }
 
-  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): Int = {
+  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): (Int, List[SetAssignment]) = {
     val l = createListOfVennRegions(s)
     var k = i
     var listOfSets: List[String] = Nil
@@ -395,7 +395,7 @@ object Algorithm {
 
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
-   f: Formula, fQE: Formula, m: Map[String, Set[String]]): Unit = {
+   f: Formula, fQE: Formula, m: Map[String, Set[String]]): List[SetAssignment] = {
      val m1 = callArithmeticSynthesiser(k, l, vars, f, fQE)
      var s = x
      var i = 0

@@ -30,3 +30,11 @@ package synthesis.bapa
 
   // \forall x \forall k \exists y \exists l. F(x, y, k, l), x, y sets, k, l integers
   case class Task(val x: List[String], val y: List[String], val k: List[String], val l: List[String], val f: Formula)
+
+  sealed abstract class ValueOrVariable
+  case class VoVVar(name: String) extends ValueOrVariable
+  case class VoVInt(value: Int) extends ValueOrVariable
+
+  sealed abstract class SetAssignment
+  case class Take(setName: String, firstCount: ValueOrVariable, fromSet: BASet) extends SetAssignment
+  case class Simple(setName: String, fromSet: BASet) extends SetAssignment
