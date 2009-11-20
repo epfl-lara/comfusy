@@ -331,12 +331,63 @@ object Algorithm {
 
 // ------------- Step 5
 
+  def callArithmeticSynthesiser(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
+   f: Formula, fQE: Formula): Map[String, PAInt] = {
+       NNNNNN = synthesis.PASynthesis.solve()
+  }
+
+
+
+  def evaluateValuesofExpression(s: Set[String], hValues: Map[String, PAInt]): PAInt = {
+// (R100, R001 R010) and returns h100 + h001 + h010
+    val l = s.toList
+    if (l.isEmpty) IntConst(0) else {
+      val l1 = map 
+
+    }
+  }
+
+  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): Int = {
+    val l = createListOfVennRegions(s)
+    var j = i
+    var listOfSets: List[String] = Nil
+    l.foreach(j => {
+       val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
+       val dj = evaluateValuesofExpression(j1, hValues)
+       if (!(dj == IntConst(0))) {
+         val nsv = "K" + j
+         listOfSets = nsv :: listOfSets
+         j = j + 1
+         if (dj == Card(j)) {
+            print("val " + nsv + " = ")
+            synthesis.bapa.Printer.print_Set(j)
+            println(" ")
+         } else {
+            print("val " + nsv + " = first(")
+            synthesis.bapa.Printer.print_Int(dj)
+            print(", ")
+            synthesis.bapa.Printer.print_Set(j)
+            println(" ")
+         }
+      }
+    })
+    if (!(listOfSets.isEmpty)) {
+      print("val " + e + " = " + listOfSets.head)
+      val t = listOfSets.tail
+      t.foreach(w => print(" UNION ") + w)
+      println(" ")
+    }
+    j
+  }
+
+
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]]): Unit = {
      val m1 = callArithmeticSynthesiser(x, y, k, k, vars, f, fQE)
      var s = x
+     var i = 0
      y.foreach(e => {
-       outputValuesofSet(e, s, m1, m)
+       i = outputValuesofSet(e, s, m1, m, i)
        s = e :: x
      })
      println("finished!")
