@@ -56,6 +56,7 @@
             </classpath>
 	    <exclude name="**/APA*.scala" />
             <exclude name="**/PASynthesisTest.scala" />
+            <exclude name="**/bapa/**/*" />
         </scalac>
     </target>
 
