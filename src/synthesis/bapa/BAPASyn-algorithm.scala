@@ -337,13 +337,23 @@ object Algorithm {
   }
 
 
+  def createBigSumOfIntegers(l: List[PAInt]): PAInt = {
+    var l1 = l.head
+    val t = l.tail
+    t.foreach(e => l1 = Plus(l1, e))
+    l1
+  }
 
-  def evaluateValuesofExpression(s: Set[String], hValues: Map[String, PAInt]): PAInt = {
+
+
+  def evaluateValuesofExpressions(s: Set[String], hValues: Map[String, PAInt]): PAInt = {
 // (R100, R001 R010) and returns h100 + h001 + h010
     val l = s.toList
     if (l.isEmpty) IntConst(0) else {
-      val l1 = map 
-
+      val l1 = l.map(e => e.replace('R', 'h'))
+      val l2 = l1.map(e => hValues(e))
+      val t = createBigSumOfIntegers(l2)
+      t
     }
   }
 
@@ -353,7 +363,7 @@ object Algorithm {
     var listOfSets: List[String] = Nil
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
-       val dj = evaluateValuesofExpression(j1, hValues)
+       val dj = evaluateValuesofExpressions(j1, hValues)
        if (!(dj == IntConst(0))) {
          val nsv = "K" + j
          listOfSets = nsv :: listOfSets
