@@ -373,6 +373,7 @@ object Algorithm {
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
        val dj = evaluateValuesofExpressions(j1, hValues)
+//// problem is that dj is returned as an integer, and it is not only number or value, can also be h_1 + h_2 + h_5
        val nsv = "K$" + k
        listOfSets = nsv :: listOfSets
        k = k + 1
