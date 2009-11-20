@@ -343,13 +343,18 @@ object Algorithm {
   }
 
 
+  def mapConnectingVariabes(outputVars: List[String], f: Formula): Map[String, PAInt] = {
+
+
+  }
+
 
   def callArithmeticSynthesiser(inputVars: List[String], outputVars: List[String], f: Formula): Map[String, PAInt] = {
 // do something, good man
 // it should return something like (variable -> NameUnderWhichWasCalled)
 // for example: val h00Var = {... code generating its value...}
 // then h000 -> IntVar(h00Var)
-    Map.empty[String,PAInt]
+    val m = mapConnectingVariabes(outputVars)
   }
 
 
