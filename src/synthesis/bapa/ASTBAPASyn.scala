@@ -69,7 +69,7 @@ object ASTBAPASyn {
       val i1n = bapaInttoArithInt(i)
       Arithmetic.Equals(Arithmetic.Modulo(i1n, Arithmetic.IntLit(c)), Arithmetic.IntLit(0))
     }
-    case _ => scala.Predef.error("Not arithmetic formula !!! ")
+    case _ => scala.Predef.error("Not arithmetic formula !!! " + a)
   }
 
 
@@ -85,7 +85,7 @@ object ASTBAPASyn {
       val i1n = bapaInttoArithInt(i1)
       Arithmetic.Times(List(Arithmetic.IntLit(c), i1n))
     }
-    case _ => scala.Predef.error("Not arithmetic formula !!! ")
+    case _ => scala.Predef.error("Not arithmetic formula !!! " + i)
   }
 
 

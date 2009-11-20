@@ -323,6 +323,9 @@ trait ChooseTransformer
           println("  ")
           println("...and the assignments say: " + asss)
 
+          println("  ")
+          println(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
+
 
           super.transform(a)
             /*
