@@ -12,7 +12,7 @@ object Algorithm {
 
     val f1 = synthesis.bapa.Algorithm.step1(f)
     val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
-    val (f3, listConstants) = synthesis.bapa.Algorithm.step4(mAll, x)
+    val (f3, listConstants) = synthesis.bapa.Algorithm.step4(mAll, x, constrainOuterRegion)
     val (f51, f52, f53) = synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
     (listConstants, f51, f52, f53)
   }
@@ -314,14 +314,35 @@ object Algorithm {
     (FAtom(IntEqual(i1, IntVar(c))), c)
   }
 
-  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]): (List[Formula], List[(String, BASet)]) = {
+  def isOnlyComplements(s: BASet): Boolean = s match {
+    case SetVar(v) => false
+    case Compl(SetVar(v)) => true
+    case EmptySet => false
+    case UnivSet => false
+    case Intersec(s1, s2) => {
+      val b1 = isOnlyComplements(s1) 
+      val b2 = isOnlyComplements(s2)
+      b1 && b2
+    }
+    case x@_ => error("Impossible case :" + x)  
+  }
+
+
+
+  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]], constrainOuterRegion: Boolean): 
+   (List[Formula], List[(String, BASet)]) = {
     var lf: List[Formula] = Nil
     var lt: List[(String, BASet)] = Nil
     var i = 0
     l.foreach(s => {
       val (f, v) = createFormulaAboutCardinalityOfVennRegion(s, m, i)
-      lf = f :: lf
-      lt = (v, s) :: lt
+      if (isOnlyComplements(s)) {
+        val f1 = And(FAtom(IntEqual(IntVar(v), IntConst(0))), f)
+        lf = f1 :: lf
+      } else {
+        lf = f :: lf
+        lt = (v, s) :: lt
+      }
       i = i + 1
     })
     (lf, lt)
@@ -334,9 +355,9 @@ object Algorithm {
     f1
   }
 
-  def step4(m: Map[String, Set[String]], l: List[String]): (Formula, List[(String, BASet)]) = { 
+  def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, BASet)]) = { 
     val ls = createListOfVennRegions(l)
-    val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m)
+    val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m, constrainOuterRegion)
     val ff = createBigConjuctionOfFormulas(lf) 
     (ff, lt)
   }

@@ -49,7 +49,7 @@ object Examples {
         val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
         print_BAPAFormula(f2)
         println(" ")
-        val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x)
+        val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x, true)
 println(lt)
         print_BAPAFormula(f3)
         println(" ")
