@@ -662,7 +662,7 @@ object PASynthesis {
     var i = 0
     val names = (input_existing map (_.name)) ++ (output_existing map (_.name)) ++ (tested_input_variables map (_.name))
     while(names contains ("x"+i)) {
-      i+=1
+      i += 1
     }
     val result = InputVar("x"+i)
     tested_input_variables = result::tested_input_variables
@@ -1170,7 +1170,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
               //         ...
               //         a*(b-1) <= eqB*a - eqA*b && eqB = b*y0+(b-1)
               val pac_ab = ((eqB*a) - (eqA*b))
-              val y = PASynthesis.newOutputVariable(input_variables_used, output_variables_used) // One variable for each new type of equation. Not for this problem.
+              val y = getNewOutputVar() // One variable for each new type of equation. Not for this problem.
               output_variables_used = y::output_variables_used
               
               val eq_possibilities : List[(PAGreaterEqZero, PAEqualZero)] = (0 to (b-1)).toList map { k:Int =>
