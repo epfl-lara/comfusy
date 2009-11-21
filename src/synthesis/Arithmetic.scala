@@ -507,7 +507,7 @@ object Arithmetic {
       val out     = new java.io.PrintStream(process.getOutputStream)
       val smt = toSMTBenchmark(form)
       out.println(smt)
-      //println(smt)
+      println(smt)
       out.flush
       out.close
       val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))

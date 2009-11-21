@@ -63,7 +63,7 @@ object ASTBAPASyn {
     case IntLessEqual(i1, i2) => {
       val i1n = bapaInttoArithInt(i1)
       val i2n = bapaInttoArithInt(i2)
-      Arithmetic.LessThan(i1n, i2n)
+      Arithmetic.LessEqThan(i1n, i2n)
     }
     case IntDivides(c, i) => {
       val i1n = bapaInttoArithInt(i)
@@ -79,11 +79,11 @@ object ASTBAPASyn {
     case Plus(i1, i2) => {
       val i1n = bapaInttoArithInt(i1)
       val i2n = bapaInttoArithInt(i2)
-      Arithmetic.Plus(List(i1n, i2n))
+      Arithmetic.Plus(i1n, i2n)
     }
     case Times(c, i1) => {
       val i1n = bapaInttoArithInt(i1)
-      Arithmetic.Times(List(Arithmetic.IntLit(c), i1n))
+      Arithmetic.Times(Arithmetic.IntLit(c), i1n)
     }
     case _ => scala.Predef.error("Not arithmetic formula !!! " + i)
   }

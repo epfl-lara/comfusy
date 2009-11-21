@@ -310,7 +310,7 @@ object Algorithm {
   def createFormulaAboutCardinalityOfVennRegion(s: BASet, m: Map[String, Set[String]], i: Int): (Formula, String) = {
     val ls = getListofVennRegionsinS(s, m)
     val i1 = createSumOfCardinalitiesofVennRegions(ls)
-    val c = "c$" + i
+    val c = "c" + i
     (FAtom(IntEqual(i1, IntVar(c))), c)
   }
 
@@ -411,7 +411,7 @@ object Algorithm {
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
        val dj = evaluateValuesofExpressions(j1, hValues)
-       val nsv = "K$" + k
+       val nsv = "K" + k
        listOfSets = nsv :: listOfSets
        k = k + 1
        val t = Take(nsv, dj, j)
@@ -425,13 +425,13 @@ object Algorithm {
         val s1 = listOfSets(0)
         val s2 = listOfSets(1)
         val lsn = listOfSets.drop(2)
-        val nsv = "K$" + k
+        val nsv = "K" + k
         var sOld = nsv
         k = k + 1
         val t1 = Simple(nsv, Union(SetVar(s1), SetVar(s2)))
         listOfAssigments = t1 :: listOfAssigments
         lsn.foreach(u => {
-          val nsv1 = "K$" + k
+          val nsv1 = "K" + k
           k = k + 1
           val t2 = Simple(nsv1, Union(SetVar(u), SetVar(sOld)))
           sOld = nsv1

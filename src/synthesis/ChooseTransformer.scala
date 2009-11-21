@@ -316,6 +316,13 @@ trait ChooseTransformer
           println(ruzicaStyleTask)
 
           val (preCardAssigns,frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask, true)
+          val myStyleFormula = normalized(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
+
+          isSat(myStyleFormula) match {
+           case (Some(true), Some(ass)) => println("sat")
+           case (Some(false), _) => println("unsat")
+           case (None,_) => println("don't know")
+         }
 
           dprintln("The cardinality assignments are... " + preCardAssigns)
           dprintln("  ")
@@ -325,7 +332,25 @@ trait ChooseTransformer
           dprintln("  ")
           dprintln("...and the assignments say: " + asss)
           dprintln("  ")
-          dprintln(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
+          dprintln(myStyleFormula)
+
+          // LINEARIZATION
+          println("XX" + (Set.empty[String] ++ linOutVars))
+          val mikaelStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(myStyleFormula, Set.empty[String] ++ linOutVars) match {
+            case Some(f) => f
+            case None => {
+              reporter.error(funBody.pos, "predicate contains non-linear arithmetic")
+              foundErrors = true
+              PASynthesis.PAFalse()
+            }
+          }
+          if (foundErrors) 
+            return a
+          
+          dprintln("Mikael-Style formula : " + mikaelStyleFormula)
+          val (paPrec,paProg) = PASynthesis.solve(linOutVars.map(PASynthesis.OutputVar(_)), mikaelStyleFormula)
+          dprintln("Precondition         : " + paPrec)
+          dprintln("Program              : " + paProg)
 
           val preliminaryCardAssigns: List[Tree] = Nil
 
@@ -354,18 +379,6 @@ trait ChooseTransformer
           dprintln("Corresponding formula: " + extractedFormula)
           dprintln("Symbols in there     : " + extractedSymbols)
 
-          // LINEARIZATION
-          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
-            case Some(f) => f
-            case None => {
-              reporter.error(funBody.pos, "predicate is not in linear arithmetic")
-              foundErrors = true
-              PASynthesis.PAFalse()
-            }
-          }
-          if (foundErrors) {
-            return a
-          }
 
           // We check for uniqueness of the solution.
           if(emitWarnings) {
