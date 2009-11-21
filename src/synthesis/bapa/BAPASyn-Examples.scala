@@ -16,7 +16,7 @@ object Examples {
     val a32 = IntLessEqual(IntConst(-1), Plus(Card(SetVar("A1")), Times(-1, Card(SetVar("A2")))))
     val a33 = SetEqual(Union(SetVar("A1"), SetVar("A2")), EmptySet)
     val f31 = And(And(FAtom(SetEqual(Union(SetVar("A1"), SetVar("A2")), SetVar("S"))), FAtom(a31)), And(FAtom(a32), FAtom(a33)))
-    val t3 = Task(l31, l32, l33, l34, f21)
+    val t3 = Task(l31, l32, l33, l34, f31)
 
 //---------------
 
