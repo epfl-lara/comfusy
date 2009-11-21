@@ -328,7 +328,6 @@ object Algorithm {
   }
 
 
-
   def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]], constrainOuterRegion: Boolean): 
    (List[Formula], List[(String, BASet)]) = {
     var lf: List[Formula] = Nil

@@ -50,7 +50,6 @@ object Examples {
         print_BAPAFormula(f2)
         println(" ")
         val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x, true)
-println(lt)
         print_BAPAFormula(f3)
         println(" ")
    //     synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
