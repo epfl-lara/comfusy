@@ -7,7 +7,7 @@ import java.lang.Integer
 import ASTBAPASyn._
 
 object Algorithm {
-  def solve (t: Task): (List[(String,BASet)],Formula,List[String],List[SetAssignment]) = {
+  def solve (t: Task, constrainOuterRegion: Boolean): (List[(String,BASet)],Formula,List[String],List[SetAssignment]) = {
     val Task(x, y, k, l, f) = t
 
     val f1 = synthesis.bapa.Algorithm.step1(f)

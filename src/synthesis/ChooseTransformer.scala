@@ -315,7 +315,7 @@ trait ChooseTransformer
 
           println(ruzicaStyleTask)
 
-          val (preCardAssigns,frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask)
+          val (preCardAssigns,frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask, true)
 
           dprintln("The cardinality assignments are... " + preCardAssigns)
           dprintln("  ")
