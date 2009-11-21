@@ -12,7 +12,7 @@ object Algorithm {
 
     val f1 = synthesis.bapa.Algorithm.step1(f)
     val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
-    val f3 = synthesis.bapa.Algorithm.step4(mAll, x)
+    val (f3, listConstants) = synthesis.bapa.Algorithm.step4(mAll, x)
     synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
   }
 
@@ -306,18 +306,24 @@ object Algorithm {
     l2
   }
 
-  def createFormulaAboutCardinalityOfVennRegion(s: BASet, m: Map[String, Set[String]]): Formula = {
+  def createFormulaAboutCardinalityOfVennRegion(s: BASet, m: Map[String, Set[String]], i: Int): (Formula, String) = {
     val ls = getListofVennRegionsinS(s, m)
     val i1 = createSumOfCardinalitiesofVennRegions(ls)
-    FAtom(IntEqual(i1, Card(s)))
+    val c = "c$" + i
+    (FAtom(IntEqual(i1, IntVar(c))), c)
   }
 
-  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]): List[Formula] = {
+  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]): (List[Formula], List[(String, BASet)]) = {
     var lf: List[Formula] = Nil
+    var lt: List[(String, BASet)] = Nil
+    var i = 0
     l.foreach(s => {
-      val f = createFormulaAboutCardinalityOfVennRegion(s, m)
-      lf = f :: lf})
-    lf
+      val (f, v) = createFormulaAboutCardinalityOfVennRegion(s, m, i)
+      lf = f :: lf
+      lt = (v, s) :: lt
+      i = i + 1
+    })
+    (lf, lt)
   }
 
   def createBigConjuctionOfFormulas(l: List[Formula]): Formula = {
@@ -327,11 +333,11 @@ object Algorithm {
     f1
   }
 
-  def step4(m: Map[String, Set[String]], l: List[String]): Formula = { 
+  def step4(m: Map[String, Set[String]], l: List[String]): (Formula, List[(String, BASet)]) = { 
     val ls = createListOfVennRegions(l)
-    val lf = createListOfFormulasAboutVennRegions(ls, m)
+    val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m)
     val ff = createBigConjuctionOfFormulas(lf) 
-    ff
+    (ff, lt)
   }
 
 //--------------------------------------------

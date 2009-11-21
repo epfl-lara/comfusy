@@ -49,10 +49,11 @@ object Examples {
         val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
         print_BAPAFormula(f2)
         println(" ")
-        val f3 = synthesis.bapa.Algorithm.step4(mAll, x)
+        val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x)
+println(lt)
         print_BAPAFormula(f3)
         println(" ")
-        synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+   //     synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
      }
      println("finished!")
    }
