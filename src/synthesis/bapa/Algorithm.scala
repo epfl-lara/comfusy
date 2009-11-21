@@ -13,7 +13,7 @@ object Algorithm {
     val f1 = synthesis.bapa.Algorithm.step1(f)
     val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
     val (f3, listConstants) = synthesis.bapa.Algorithm.step4(mAll, x, constrainOuterRegion)
-    val (f51, f52, f53) = synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+    val (f51, f52, f53) = synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll, constrainOuterRegion)
     (listConstants, f51, f52, f53)
   }
 
@@ -418,13 +418,15 @@ object Algorithm {
     }
   }
 
-  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], i: Int): 
-   (Int, List[SetAssignment]) = {
+  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], 
+   i: Int, constrainOuterRegion: Boolean): (Int, List[SetAssignment]) = {
 // e - output set variable who we are defining here
 // s - already known set variables, hValues - values of h variables (h00 -> SetVar(h00V), etc.) 
 // vRegions - aready existing a map saying which Venn region is contained in a set
 // counting added sets
-    val l = createListOfVennRegions(s)
+    val l0 = createListOfVennRegions(s)
+    val l = if (constrainOuterRegion) l0
+      else l0.filter(h => !(isOnlyComplements(h)))
     var k = i
     var listOfSets: List[String] = Nil
     var listOfAssigments: List[SetAssignment] = Nil 
@@ -466,7 +468,7 @@ object Algorithm {
 
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
-   f: Formula, fQE: Formula, m: Map[String, Set[String]]): (Formula,List[String],List[SetAssignment]) = {
+   f: Formula, fQE: Formula, m: Map[String, Set[String]], constrainOuterRegion: Boolean): (Formula,List[String],List[SetAssignment]) = {
      val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
      val outputVarsForMikael: List[String] = l ::: vars
      val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
@@ -474,7 +476,7 @@ object Algorithm {
      var listOfAssignments: List[SetAssignment] = Nil 
      var i = 0
      y.foreach(e => {
-       val (j, tl) = outputValuesofSet(e, s, m1, m, i)
+       val (j, tl) = outputValuesofSet(e, s, m1, m, i, constrainOuterRegion)
        listOfAssignments = listOfAssignments ::: tl
        s = e :: x
        i = j
