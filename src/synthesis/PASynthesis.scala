@@ -1185,13 +1185,28 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
             }
           }
         }
-        // Now we have to take exactly a possibility into each one of the list, solve it, and this gives the PASplitCase
-        def choose(remaining_possibilities: List[List[(PAGreaterEqZero, PAEqualZero)]], current_choice: List[PAEquation]):List[(PACondition, PAProgram)] = remaining_possibilities match {
-          case Nil => List(PASynthesis.solve(output_variables, current_choice))
-          case (Nil::rest) => Nil
-          case (((new_ineq, new_eq)::pos1)::rest) => choose(rest, new_ineq::new_eq::current_choice) ++ choose(pos1::rest, current_choice)
+        
+        if(output_variables == Nil) { // We return all equations as preconditions
+          var more_preconditions:List[PAFormula] = Nil
+          def store(remaining_possibilities: List[List[(PAGreaterEqZero, PAEqualZero)]], current_choice: List[PAEquation]):Unit = remaining_possibilities match {
+            case Nil => more_preconditions = PAConjunction(current_choice)::more_preconditions
+            case (Nil::rest) => Nil
+            case (((new_ineq, new_eq)::pos1)::rest) =>
+              store(rest, new_ineq::new_eq::current_choice)
+              store(pos1::rest, current_choice)
+          }
+          store(disjoint_possibilities, current_inequalities)
+          addPrecondition(PADisjunction(more_preconditions))
+          Some(PACaseSplit.empty)
+        } else {
+          // Now we have to take exactly a possibility into each one of the list, solve it, and this gives the PASplitCase
+          def choose(remaining_possibilities: List[List[(PAGreaterEqZero, PAEqualZero)]], current_choice: List[PAEquation]):List[(PACondition, PAProgram)] = remaining_possibilities match {
+            case Nil => List(PASynthesis.solve(output_variables, current_choice))
+            case (Nil::rest) => Nil
+            case (((new_ineq, new_eq)::pos1)::rest) => choose(rest, new_ineq::new_eq::current_choice) ++ choose(pos1::rest, current_choice)
+          }
+          Some(PACaseSplit(choose(disjoint_possibilities, current_inequalities)))
         }
-        Some(PACaseSplit(choose(disjoint_possibilities, current_inequalities)))
       }
     }
     
