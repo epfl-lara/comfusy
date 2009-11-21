@@ -6,7 +6,6 @@ object SplitSetsInABalancedWay {
 
     val bigSet = Set("Ladybugs", "must", "render", "you", "catatonic", ".")
 
-//    val z = Set.empty[String]
     val maxDiff = 1
 
     val (setA, setB) = choose((A: Set[String], B: Set[String]) => (

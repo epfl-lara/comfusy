@@ -15,6 +15,10 @@ trait CodeGeneration {
   private lazy val scalaMath: Symbol = definitions.getModule("scala.Math")
   private lazy val scalaMathMin: Symbol = definitions.getMember(scalaMath, "min")
   private lazy val scalaMathMax: Symbol = definitions.getMember(scalaMath, "max")
+  private lazy val scalaCollection: Symbol = definitions.getModule("scala.collection")
+  private lazy val scalaCollectionImmutable: Symbol = definitions.getModule("scala.collection.immutable")
+  private lazy val scalaCollectionImmutableSetModule: Symbol = definitions.getModule("scala.collection.immutable.Set")
+  private lazy val setEmpty: Symbol = definitions.getMember(scalaCollectionImmutableSetModule, "empty")
   
   class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap, val emitWarnings: Boolean, val pos: Position) {
     import scala.tools.nsc.util.NoPosition
@@ -77,7 +81,7 @@ trait CodeGeneration {
         if (valCount == 1) {
           List(ValDef(map(valNames.head), bigIteExpr))
         } else {
-          val tempTupleSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+          val tempTupleSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
           ValDef(tempTupleSym, bigIteExpr) :: (
             for(val c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
           ).toList
@@ -195,14 +199,25 @@ trait CodeGeneration {
       Block(inputAss, formulaToCode(map, cond.global_condition)) 
     }
 
-    def setTermToCode(map: SymbolMap, term: bapa.ASTBAPASyn.BASet, baseTypeTree: Tree): Tree = term match {
+    def setTermToCode(map: SymbolMap, term: bapa.ASTBAPASyn.BASet, baseTypeTree: TypeTree): Tree = term match {
       case bapa.ASTBAPASyn.SetVar(name) => variable(map, name)
-      case bapa.ASTBAPASyn.EmptySet => EmptyTree
+      case bapa.ASTBAPASyn.EmptySet => /*TypeApply(*/Select(Select(Select(Select(Ident(scalaPack), scalaCollection), scalaCollectionImmutable), scalaCollectionImmutableSetModule), setEmpty)//, List(baseTypeTree)) 
       case bapa.ASTBAPASyn.Union(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), nme.PLUSPLUS), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(s1, bapa.ASTBAPASyn.Compl(s2)) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("--")), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(bapa.ASTBAPASyn.Compl(s1), s2) => Apply(Select(setTermToCode(map,s2,baseTypeTree), encode("--")), List(setTermToCode(map,s1,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("**")), List(setTermToCode(map,s2,baseTypeTree)))
-      case _ => scala.Predef.error("Don't know what to do with : " + term)
+      case _ => {
+        //setTermToCode(map, bapa.ASTBAPASyn.EmptySet, baseTypeTree) 
+        scala.Predef.error("Don't know what to do with : " + term)
+      }
+    }
+
+    def setIntTermToCode(map: SymbolMap, term: bapa.ASTBAPASyn.PAInt, baseTypeTree: TypeTree): Tree = term match {
+      case bapa.ASTBAPASyn.IntVar(name) => variable(map, name)
+      case bapa.ASTBAPASyn.IntConst(c) => Literal(Constant(c))
+      case bapa.ASTBAPASyn.Plus(t1,t2) => Apply(Select(setIntTermToCode(map,t1,baseTypeTree), nme.ADD), List(setIntTermToCode(map,t2,baseTypeTree)))
+      case bapa.ASTBAPASyn.Times(coef,t2) => Apply(Select(setIntTermToCode(map,t2,baseTypeTree), nme.MUL), List(Literal(Constant(coef))) )
+      case bapa.ASTBAPASyn.Card(st) => Select(setTermToCode(map,st,baseTypeTree), "size")
     }
   }
 }

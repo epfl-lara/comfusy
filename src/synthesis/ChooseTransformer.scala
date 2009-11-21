@@ -6,6 +6,8 @@ import scala.collection.immutable.Set
 
 import scala.tools.nsc.transform.TypingTransformers
 
+import scala.tools.nsc.util.NoPosition
+
 trait ChooseTransformer
   extends TypingTransformers
   with ArithmeticExtractors
@@ -19,6 +21,7 @@ trait ChooseTransformer
       println(str.toString)
   }
 
+  private lazy val synthesisPackage: Symbol = definitions.getModule("synthesis")
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
   private lazy val immutableSetTraitSymbol = definitions.getClass("scala.collection.immutable.Set")
 
@@ -286,6 +289,10 @@ trait ChooseTransformer
         // most likely the ugliest match case you ever encountered.
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && (predicate.vparams(0).tpt.tpe match { case TypeRef(_,sym,_) if (sym == immutableSetTraitSymbol) => true case _ => false })) => {
           reporter.info(predicate.pos, "in a set choose !!!", true)
+          val instantiatedSetType  = predicate.vparams(0).tpt.tpe
+          val TypeRef(_, _, List(uletTpe)) = instantiatedSetType
+          val underlyingElementType: Type = uletTpe
+          val underlyingElementTypeTree: TypeTree = TypeTree(uletTpe)
 
           // SANITY CHECKS
           var foundErrors = false
@@ -313,16 +320,10 @@ trait ChooseTransformer
 
           val ruzicaStyleTask = bapa.ASTBAPASyn.Task(inSetVarList.map(_.name.toString), outSetVarList.map(_.name.toString), inIntVarList.map(_.name.toString), Nil, frml)
 
-          println(ruzicaStyleTask)
+          dprintln(ruzicaStyleTask)
 
           val (preCardAssigns,frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask, true)
           val myStyleFormula = normalized(bapa.ASTBAPASyn.bapaFormToArithForm(frmForSynthesis))
-
-          isSat(myStyleFormula) match {
-           case (Some(true), Some(ass)) => println("sat")
-           case (Some(false), _) => println("unsat")
-           case (None,_) => println("don't know")
-         }
 
           dprintln("The cardinality assignments are... " + preCardAssigns)
           dprintln("  ")
@@ -335,7 +336,6 @@ trait ChooseTransformer
           dprintln(myStyleFormula)
 
           // LINEARIZATION
-          println("XX" + (Set.empty[String] ++ linOutVars))
           val mikaelStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(myStyleFormula, Set.empty[String] ++ linOutVars) match {
             case Some(f) => f
             case None => {
@@ -347,18 +347,60 @@ trait ChooseTransformer
           if (foundErrors) 
             return a
           
-          dprintln("Mikael-Style formula : " + mikaelStyleFormula)
+          dprintln(mikaelStyleFormula)
+
           val (paPrec,paProg) = PASynthesis.solve(linOutVars.map(PASynthesis.OutputVar(_)), mikaelStyleFormula)
-          dprintln("Precondition         : " + paPrec)
-          dprintln("Program              : " + paProg)
 
           // CODE GENERATION
           var symbolMap: SymbolMap = Map.empty
+          // we put in the 'c' symbols
+          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+          inIntVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
+          inSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
 
+          val codeGen = new CodeGenerator(unit, currentOwner, symbolMap, emitWarnings, a.pos)
 
-          val preliminaryCardAssigns: List[Tree] = Nil
-          val mikiProgram: List[Tree] = Nil
-          val concludingAssigns: List[Tree] = Nil
+          val preliminaryCardAssigns: List[Tree] = preCardAssigns.map(pca => {
+            ValDef(symbolMap(pca._1), codeGen.setIntTermToCode(symbolMap, pca._2, underlyingElementTypeTree))
+          })
+
+          val mikiProgram: List[Tree] = {
+            //val mikiFun: Tree = Throw(New(Ident(definitions.getClass("synthesis.Definitions.UnsatisfiableConstraint")), List(Nil)))
+            dprintln(paPrec)
+            dprintln(paProg)
+            val mikiFun: Tree = codeGen.programToCode(paPrec, paProg, true)
+            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+
+            val lovss = linOutVars.size
+            if(lovss == 1) {
+              List(ValDef(symbolMap(linOutVars.head), mikiFun))
+            } else {
+              val tempTupleSym = currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
+              ValDef(tempTupleSym, mikiFun) :: (
+                for(val c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
+            }
+          }
+
+          outSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
+          val concludingAssigns: List[Tree] = (for(val ass <- asss) yield {
+            if(!symbolMap.isDefinedAt(ass.setName)) {
+              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, ass.setName + "$")).setInfo(instantiatedSetType))
+            }
+            ass match {
+              case bapa.ASTBAPASyn.Simple(nme, setExpr) => ValDef(symbolMap(nme), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
+              case bapa.ASTBAPASyn.Take(nme, cnt, setExpr) => {
+                ValDef(symbolMap(nme),
+                  Apply(
+                    Select(Select(Ident(synthesisPackage), synthesisDefinitionsModule), definitions.getMember(synthesisDefinitionsModule, "takeFromSet")),
+                    List(codeGen.setIntTermToCode(symbolMap, cnt, underlyingElementTypeTree), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
+                  )
+                )
+
+              }
+            }
+          }).toList
+
+           
 
           typer.typed(atOwner(currentOwner) {
             Block(
@@ -366,7 +408,14 @@ trait ChooseTransformer
               mikiProgram :::
               concludingAssigns :::
               Nil,
-              a
+              if(outSetVarList.size == 1) { 
+                Ident(outSetVarList(0))
+              } else {
+                New(
+                  TypeTree(definitions.tupleType(outSetVarList.map(x => instantiatedSetType))),
+                  List(outSetVarList.map(sym => Ident(sym)))
+                )
+              }
             )
           })
         } 

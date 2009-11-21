@@ -216,7 +216,13 @@ object Arithmetic {
 
     // rewrites all predicates into ... = 0 and ... >= 0
     def normalizePredicate(predicate: Predicate): Formula = predicate match {
-      case Equals(l, r) => Equals(linearize(Minus(l, r)), IntLit(0))
+      case Equals(l, r) => {
+        val lnrz = linearize(Minus(l, r))
+        if (lnrz == IntLit(0))
+          True()
+        else
+          Equals(lnrz, IntLit(0))
+      }
       case NotEquals(l, r) => { Or(
           normalizePredicate(LessThan(l,r)),
           normalizePredicate(LessThan(r,l))
@@ -507,7 +513,7 @@ object Arithmetic {
       val out     = new java.io.PrintStream(process.getOutputStream)
       val smt = toSMTBenchmark(form)
       out.println(smt)
-      println(smt)
+      // println(smt)
       out.flush
       out.close
       val in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream))

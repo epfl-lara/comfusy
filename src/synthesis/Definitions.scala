@@ -33,7 +33,7 @@ object Definitions {
 
   // Function that builds a set by taking a subset of an existing one.
   import scala.collection.immutable.Set
-  def take[A](n: Int, from: Set[A]): Set[A] = {
+  def takeFromSet[A](n: Int, from: Set[A]): Set[A] = {
     if (from.size < n) {
       throw new java.lang.IllegalArgumentException("set is too small")
     } else {

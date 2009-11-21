@@ -36,7 +36,9 @@ object ASTBAPASyn {
   // \forall x \forall k \exists y \exists l. F(x, y, k, l), x, y sets, k, l integers
   case class Task(x: List[String], y: List[String], k: List[String], l: List[String], f: Formula)
 
-  sealed abstract class SetAssignment
+  sealed abstract class SetAssignment {
+    val setName: String
+  }
   case class Take(setName: String, firstCount: PAInt, fromSet: BASet) extends SetAssignment
   case class Simple(setName: String, fromSet: BASet) extends SetAssignment
 
@@ -88,6 +90,8 @@ object ASTBAPASyn {
     case _ => scala.Predef.error("Not arithmetic formula !!! " + i)
   }
 
-
+  def simplifySetAssignmentList(list: List[SetAssignment], keep: List[String]): List[SetAssignment] = {
+    list
+  }
 
 }
