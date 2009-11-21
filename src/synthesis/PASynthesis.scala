@@ -657,13 +657,16 @@ object PASynthesis {
     }
     OutputVar("y"+i)
   }
+  var tested_input_variables:List[InputVar] = Nil
   def newInputVariable(input_existing: List[InputVar], output_existing : List[OutputVar]): InputVar = {
     var i = 0
-    val names = (input_existing map (_.name)) ++ (output_existing map (_.name))
+    val names = (input_existing map (_.name)) ++ (output_existing map (_.name)) ++ (tested_input_variables map (_.name))
     while(names contains ("x"+i)) {
       i+=1
     }
-    InputVar("x"+i)
+    val result = InputVar("x"+i)
+    tested_input_variables = result::tested_input_variables
+    result
   }
   
   // Split the list into PAEqualZero one left and not PAEqualZero on right
@@ -1184,7 +1187,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
         }
         // Now we have to take exactly a possibility into each one of the list, solve it, and this gives the PASplitCase
         def choose(remaining_possibilities: List[List[(PAGreaterEqZero, PAEqualZero)]], current_choice: List[PAEquation]):List[(PACondition, PAProgram)] = remaining_possibilities match {
-          case Nil => List(PASynthesis.solve(current_choice))
+          case Nil => List(PASynthesis.solve(output_variables, current_choice))
           case (Nil::rest) => Nil
           case (((new_ineq, new_eq)::pos1)::rest) => choose(rest, new_ineq::new_eq::current_choice) ++ choose(pos1::rest, current_choice)
         }
@@ -1204,6 +1207,13 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
           //Adds the global precondition the disjunction fo the case split conditions.
           val splitted_conditions:List[PACondition] = list_cond_prog map (_._1)
           val splitted_formulas:List[PAFormula] = splitted_conditions map (_.global_condition)
+          var formulas:List[PAFormula] = Nil
+          splitted_conditions foreach {
+            case PACondition(assignments, formula) =>
+              assignments foreach {
+                case (iv, t) => addInputAssignment(iv, t)
+              }
+          }
           addPrecondition(PADisjunction(splitted_formulas))
         } else {
           setRemainingVariablesToZero(output_variables)
