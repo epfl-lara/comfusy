@@ -352,86 +352,23 @@ trait ChooseTransformer
           dprintln("Precondition         : " + paPrec)
           dprintln("Program              : " + paProg)
 
-          val preliminaryCardAssigns: List[Tree] = Nil
+          // CODE GENERATION
+          var symbolMap: SymbolMap = Map.empty
 
+
+          val preliminaryCardAssigns: List[Tree] = Nil
+          val mikiProgram: List[Tree] = Nil
+          val concludingAssigns: List[Tree] = Nil
 
           typer.typed(atOwner(currentOwner) {
             Block(
-              preliminaryCardAssigns ::: Nil,
+              preliminaryCardAssigns ::: 
+              mikiProgram :::
+              concludingAssigns :::
+              Nil,
               a
             )
           })
-
-          //super.transform(a)
-            /*
-          // EXTRACTION
-          val (extractedFormula,extractedSymbols) =
-           extractFormula(funBody) match {
-            case Some((f,s)) => (normalized(f), s.filter((sym: Symbol) => !outputVariableList.contains(sym.name.toString)))
-            case None => {
-              foundErrors = true
-              (False(),Set.empty[Symbol])
-            }
-          }
-          if (foundErrors)
-            return a
-
-          dprintln("Corresponding formula: " + extractedFormula)
-          dprintln("Symbols in there     : " + extractedSymbols)
-
-
-          // We check for uniqueness of the solution.
-          if(emitWarnings) {
-            val outVars = Set.empty ++ outputVariableList
-            val (fcopy,toMap,fromMap) = renameVarSet(extractedFormula, outVars)
-            val diseqs: List[Formula] = toMap.map(p => NotEquals(Variable(p._1), Variable(p._2))).toList
-            val completeFormula = And(extractedFormula :: fcopy :: diseqs)
-            isSat(completeFormula) match {
-              case (Some(true), Some(ass)) => {
-                var wm = "Synthesis predicate has multiple solutions for variable assignment: "
-                wm = wm + ass.keys.filter(k => !toMap.keys.contains(k) && !fromMap.keys.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
-                wm = wm + "\n"
-                wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
-                wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
-                reporter.info(a.pos, wm, true)
-              }
-              case (Some(false), _) => ; // desirable: solution is always unique if it exists
-              case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always have a unique solution (decision procedure did not respond).", true)
-            }
-          }
-
-          dprintln("Mikael-Style formula : " + paStyleFormula)
-          val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
-          dprintln("Precondition         : " + paPrec)
-          dprintln("Program              : " + paProg)
-
-          // We try to falsify the pre-condition.
-          if(emitWarnings && paPrec != PASynthesis.PATrue()) {
-            // have to do this cause formula could be false in a semi-obvious way.
-            val myStyle = conditionToFormula(paPrec) 
-            if(myStyle != False()) {
-              dprintln("My-style: " + myStyle)
-              isSat(Not(myStyle)) match {
-                case (Some(true), Some(ass)) => {
-                  reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
-
-                }
-                case (Some(false), _) => ;
-                case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
-              }
-            }
-          }
-          
-          // CODE GENERATION
-          var initialMap: SymbolMap = Map.empty
-          extractedSymbols.foreach(sym => {
-            initialMap = initialMap + (sym.name.toString -> sym)
-          })
-          val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
-          typer.typed(atOwner(currentOwner) {
-            codeGen.programToCode(paPrec, paProg, true) 
-          })
-*/
         } 
 
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {

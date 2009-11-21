@@ -7,7 +7,7 @@ import java.lang.Integer
 import ASTBAPASyn._
 
 object Algorithm {
-  def solve (t: Task, constrainOuterRegion: Boolean): (List[(String,BASet)],Formula,List[String],List[SetAssignment]) = {
+  def solve (t: Task, constrainOuterRegion: Boolean): (List[(String,PAInt)],Formula,List[String],List[SetAssignment]) = {
     val Task(x, y, k, l, f) = t
 
     val f1 = synthesis.bapa.Algorithm.step1(f)
@@ -328,19 +328,19 @@ object Algorithm {
   }
 
 
+
   def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]], constrainOuterRegion: Boolean): 
-   (List[Formula], List[(String, BASet)]) = {
+   (List[Formula], List[(String, PAInt)]) = {
     var lf: List[Formula] = Nil
-    var lt: List[(String, BASet)] = Nil
+    var lt: List[(String, PAInt)] = Nil
     var i = 0
     l.foreach(s => {
       val (f, v) = createFormulaAboutCardinalityOfVennRegion(s, m, i)
+      lf = f :: lf
       if (isOnlyComplements(s)) {
-        val f1 = And(FAtom(IntEqual(IntVar(v), IntConst(0))), f)
-        lf = f1 :: lf
-      } else {
-        lf = f :: lf
-        lt = (v, s) :: lt
+        lt = (v, IntConst(0)) :: lt
+      } else {        
+        lt = (v, Card(s)) :: lt
       }
       i = i + 1
     })
@@ -354,7 +354,7 @@ object Algorithm {
     f1
   }
 
-  def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, BASet)]) = { 
+  def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, PAInt)]) = { 
     val ls = createListOfVennRegions(l)
     val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m, constrainOuterRegion)
     val ff = createBigConjuctionOfFormulas(lf) 
@@ -461,7 +461,7 @@ object Algorithm {
         listOfAssigments = t3 :: listOfAssigments
       }
     }
-    (k, listOfAssigments)
+    (k, listOfAssigments.reverse)
   }
 
 
@@ -479,7 +479,7 @@ object Algorithm {
        s = e :: x
        i = j
      })
-     (f1,outputVarsForMikael,listOfAssignments.reverse)
+     (f1,outputVarsForMikael,listOfAssignments)
   }
 
 }
