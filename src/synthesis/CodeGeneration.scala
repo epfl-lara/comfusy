@@ -195,5 +195,14 @@ trait CodeGeneration {
       Block(inputAss, formulaToCode(map, cond.global_condition)) 
     }
 
+    def setTermToCode(map: SymbolMap, term: bapa.ASTBAPASyn.BASet, baseTypeTree: Tree): Tree = term match {
+      case bapa.ASTBAPASyn.SetVar(name) => variable(map, name)
+      case bapa.ASTBAPASyn.EmptySet => EmptyTree
+      case bapa.ASTBAPASyn.Union(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), nme.PLUSPLUS), List(setTermToCode(map,s2,baseTypeTree)))
+      case bapa.ASTBAPASyn.Intersec(s1, bapa.ASTBAPASyn.Compl(s2)) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("--")), List(setTermToCode(map,s2,baseTypeTree)))
+      case bapa.ASTBAPASyn.Intersec(bapa.ASTBAPASyn.Compl(s1), s2) => Apply(Select(setTermToCode(map,s2,baseTypeTree), encode("--")), List(setTermToCode(map,s1,baseTypeTree)))
+      case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("**")), List(setTermToCode(map,s2,baseTypeTree)))
+      case _ => scala.Predef.error("Don't know what to do with : " + term)
+    }
   }
 }

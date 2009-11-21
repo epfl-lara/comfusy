@@ -315,8 +315,10 @@ trait ChooseTransformer
 
           println(ruzicaStyleTask)
 
-          val (frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask)
+          val (preCardAssigns,frmForSynthesis,linOutVars,asss) = bapa.Algorithm.solve(ruzicaStyleTask)
 
+          dprintln("The cardinality assignments are... " + preCardAssigns)
+          dprintln("  ")
           dprintln("And the formula for syntesis is.... " + frmForSynthesis)
           dprintln("  ")
           dprintln("Local out vars : " + linOutVars)

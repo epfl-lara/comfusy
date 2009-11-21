@@ -7,13 +7,14 @@ import java.lang.Integer
 import ASTBAPASyn._
 
 object Algorithm {
-  def solve (t: Task): (Formula,List[String],List[SetAssignment]) = {
+  def solve (t: Task): (List[(String,BASet)],Formula,List[String],List[SetAssignment]) = {
     val Task(x, y, k, l, f) = t
 
     val f1 = synthesis.bapa.Algorithm.step1(f)
     val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
     val (f3, listConstants) = synthesis.bapa.Algorithm.step4(mAll, x)
-    synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+    val (f51, f52, f53) = synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+    (listConstants, f51, f52, f53)
   }
 
 
