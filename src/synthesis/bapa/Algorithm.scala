@@ -339,7 +339,7 @@ object Algorithm {
       lf = f :: lf
       if (isOnlyComplements(s)) {
         lt = (v, IntConst(0)) :: lt
-      } else {        
+      } else {
         lt = (v, Card(s)) :: lt
       }
       i = i + 1
@@ -355,7 +355,9 @@ object Algorithm {
   }
 
   def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, PAInt)]) = { 
-    val ls = createListOfVennRegions(l)
+    val l0 = createListOfVennRegions(l)
+    val ls = if (constrainOuterRegion) l0.filter(h => !(isOnlyComplements(h)))
+      else l0
     val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m, constrainOuterRegion)
     val ff = createBigConjuctionOfFormulas(lf) 
     (ff, lt)
@@ -425,8 +427,8 @@ object Algorithm {
 // vRegions - aready existing a map saying which Venn region is contained in a set
 // counting added sets
     val l0 = createListOfVennRegions(s)
-    val l = if (constrainOuterRegion) l0
-      else l0.filter(h => !(isOnlyComplements(h)))
+    val l = if (constrainOuterRegion) l0.filter(h => !(isOnlyComplements(h)))
+      else l0
     var k = i
     var listOfSets: List[String] = Nil
     var listOfAssigments: List[SetAssignment] = Nil 
