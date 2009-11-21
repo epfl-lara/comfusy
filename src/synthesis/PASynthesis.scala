@@ -743,8 +743,8 @@ object PASynthesis {
         case Nil => 
           output_assignments match {
             case Nil => (input_assignments_new.reverse, output_assignments_new.reverse)
-            case (v, pac@PACombination(_, _, _))::q => 
-              pac.replaceList(assignments_to_propagate_input, assignments_to_propagate_output) match {
+            case (v, t)::q => 
+              t.replaceList(assignments_to_propagate_input, assignments_to_propagate_output) match {
               case t@PACombination(_, _, _) =>
                 if(interesting_variables contains v) { // yes ! let's keep this variable
                   recursive_propagation_delete_temp(Nil, q,
@@ -760,7 +760,7 @@ object PASynthesis {
                                                     interesting_variables,
                                                     input_assignments_new, output_assignments_new)
                 }
-              // The term is not affine anymore, so we keep it without replacing.
+              // The term is not affine, so we keep it without replacing.
               case t => recursive_propagation_delete_temp(Nil, q,
                                                           assignments_to_propagate_input,
                                                           assignments_to_propagate_output,
@@ -768,14 +768,6 @@ object PASynthesis {
                                                           input_assignments_new,
                                                           (v, t)::output_assignments_new)
             }
-           // The term is not affine, so we keep it without replacing.
-            case (v, t)::q =>
-              recursive_propagation_delete_temp(Nil, q,
-                                                assignments_to_propagate_input,
-                                                assignments_to_propagate_output,
-                                                interesting_variables,
-                                                input_assignments_new,
-                                                (v, t)::output_assignments_new)
           }
         // On input_assignments : they can be useful if case disjunctions, so we always keep them.
         // OptimizeMe : If not used in case disjunction, remove input variables.
@@ -801,7 +793,7 @@ object PASynthesis {
                                             assignments_to_propagate_input,
                                             assignments_to_propagate_output,
                                             interesting_variables,
-                                            (v, t)::input_assignments_new,
+                                            (v, t.replaceList(assignments_to_propagate_input, assignments_to_propagate_output))::input_assignments_new,
                                             output_assignments_new)
       }
       
