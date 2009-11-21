@@ -15,7 +15,7 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
-  private val SHOWDEBUGINFO = true
+  private val SHOWDEBUGINFO = false
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
       println(str.toString)
@@ -288,7 +288,7 @@ trait ChooseTransformer
 
         // most likely the ugliest match case you ever encountered.
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && (predicate.vparams(0).tpt.tpe match { case TypeRef(_,sym,_) if (sym == immutableSetTraitSymbol) => true case _ => false })) => {
-          reporter.info(predicate.pos, "in a set choose !!!", true)
+          // reporter.info(predicate.pos, "in a set choose !!!", true)
           val instantiatedSetType  = predicate.vparams(0).tpt.tpe
           val TypeRef(_, _, List(uletTpe)) = instantiatedSetType
           val underlyingElementType: Type = uletTpe
