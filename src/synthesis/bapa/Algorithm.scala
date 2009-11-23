@@ -470,7 +470,7 @@ object Algorithm {
 
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
-   f: Formula, fQE: Formula, m: Map[String, Set[String]], constrainOuterRegion: Boolean): (Formula,List[String],List[SetAssignment]) = {
+   f: Formula, fQE: Formula, m: Map[String, Set[String]], constrainOuterRegion: Boolean): (Formula, List[String], List[SetAssignment]) = {
      val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
      val outputVarsForMikael: List[String] = l ::: vars
      val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
@@ -483,7 +483,7 @@ object Algorithm {
        s = e :: x
        i = j
      })
-     (f1,outputVarsForMikael,listOfAssignments)
+     (f1, outputVarsForMikael, listOfAssignments)
   }
 
 }
