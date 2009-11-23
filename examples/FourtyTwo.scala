@@ -7,6 +7,6 @@ object FourtyTwo {
 
     val 42 * x + 5 * y = z
 
-    println(z + " = 42 * " + x + " 5 * " + y)
+    println(z + " = 42 * " + x + " + 5 * " + y)
   }
 }
