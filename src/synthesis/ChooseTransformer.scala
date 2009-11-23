@@ -85,7 +85,7 @@ trait ChooseTransformer
             val outVars = Set.empty ++ outputVariableList
             val (fcopy,toMap,fromMap) = renameVarSet(extractedFormula, outVars)
             val diseqs: List[Formula] = toMap.map(p => NotEquals(Variable(p._1), Variable(p._2))).toList
-            val completeFormula = And(extractedFormula :: fcopy :: diseqs)
+            val completeFormula = And(extractedFormula :: fcopy :: Or(diseqs) :: Nil)
             isSat(completeFormula) match {
               case (Some(true), Some(ass)) => {
                 var wm = "Synthesis predicate has multiple solutions for variable assignment: "
