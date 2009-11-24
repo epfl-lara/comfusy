@@ -329,7 +329,9 @@ object Algorithm {
 
 
 
-  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]], constrainOuterRegion: Boolean): 
+  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]): 
+   // input: list of venn regions of input set, m map which says which venn regions are in a set 
+   // output: list of formula expressing h_u + ... +h_v = c_i and map c_i = card(A INTRS BC..)
    (List[Formula], List[(String, PAInt)]) = {
     var lf: List[Formula] = Nil
     var lt: List[(String, PAInt)] = Nil
@@ -337,17 +339,29 @@ object Algorithm {
     l.foreach(s => {
       val (f, v) = createFormulaAboutCardinalityOfVennRegion(s, m, i)
       lf = f :: lf
-      if (isOnlyComplements(s)) {
-        lt = (v, IntConst(0)) :: lt
-      } else {
-        lt = (v, Card(s)) :: lt
-      }
+      lt = (v, Card(s)) :: lt
       i = i + 1
     })
     (lf, lt)
   }
 
+
+  def createFormulaThatWeCannotAddEllements(s: BASet, m: Map[String, Set[String]]): List[Formula] = {
+  // takes set AC INTRS BC etc and returns that all Venn regions need to be zero
+    val ss = getListofVennRegionsinS(s, m)
+    val ls = ss.toList
+    var lf: List[Formula] = Nil
+    ls.foreach(e => {
+      val ni = createCardinalityOfVennRegion(e)
+      val fi = FAtom(IntEqual(ni, IntConst(0)))
+      lf = fi :: lf
+    })
+    lf
+  }
+
+
   def createBigConjuctionOfFormulas(l: List[Formula]): Formula = {
+  // input List(f1, f2,...fn)  output: f1 AND f2 AND... AND fn
     var f1 = l.head
     val t = l.tail
     t.foreach(e => f1 = And(f1, e))
@@ -358,8 +372,14 @@ object Algorithm {
     val l0 = createListOfVennRegions(l)
     val ls = if (constrainOuterRegion) l0.filter(h => !(isOnlyComplements(h)))
       else l0
-    val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m, constrainOuterRegion)
-    val ff = createBigConjuctionOfFormulas(lf) 
+    val compl = l0.filter(h => isOnlyComplements(h))
+    val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m)
+    val lf1 = if (!(constrainOuterRegion)) lf
+      else { 
+        val lf2 = createFormulaThatWeCannotAddEllements(compl.head, m)
+        lf2 ::: lf
+      }
+    val ff = createBigConjuctionOfFormulas(lf1)
     (ff, lt)
   }
 
@@ -391,10 +411,7 @@ object Algorithm {
 
 
   def callArithmeticSynthesiser(inputVars: List[String], outputVars: List[String], f: Formula): Map[String, PAInt] = {
-// do something, good man
-// it should return something like (variable -> NameUnderWhichWasCalled)
-// for example: val h00Var = {... code generating its value...}
-// then h000 -> IntVar(h00Var)
+// currently: retuns h000 -> IntVar(h00Var)
     val m = mapConnectingVariabes(outputVars)
     m
   }
@@ -425,7 +442,7 @@ object Algorithm {
 // e - output set variable who we are defining here
 // s - already known set variables, hValues - values of h variables (h00 -> SetVar(h00V), etc.) 
 // vRegions - aready existing a map saying which Venn region is contained in a set
-// counting added sets
+// counting added sets,  constrainOuterRegion: Boolean, true=no fresh variables
     val l0 = createListOfVennRegions(s)
     val l = if (constrainOuterRegion) l0.filter(h => !(isOnlyComplements(h)))
       else l0
@@ -471,7 +488,9 @@ object Algorithm {
 
   def step5(x: List[String], y: List[String], k: List[String], l: List[String], vars: List[String],
    f: Formula, fQE: Formula, m: Map[String, Set[String]], constrainOuterRegion: Boolean): (Formula, List[String], List[SetAssignment]) = {
-     val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
+  // input x: inputSets, y:outputSets, k: inputInts, l: outputInts, vars: variables occurring in translated BAPA
+  // f: translated formula, fQE: QE formula, m:map of venn regions, constrainOuterRegion: Boolean, true=no fresh variables
+    val f1 = createFormulaToCallSynthesiser(vars, f, fQE)
      val outputVarsForMikael: List[String] = l ::: vars
      val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
      var s = x

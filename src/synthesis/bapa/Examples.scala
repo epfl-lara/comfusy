@@ -8,6 +8,15 @@ object Examples {
 
 //---------------
 
+    val l41 = List("A")
+    val l42 = List("S")
+    val l43: List[String] = Nil
+    val l44: List[String] = Nil
+    val f41 = And(FAtom(IntLessEqual(Card(SetVar("A")), Card(SetVar("S")))), Not(FAtom(IntEqual(Card(SetVar("A")), Card(SetVar("S"))))))
+    val t4 = Task(l41, l42, l43, l44, f41)
+
+//---------------
+
     val l31 = List("S")
     val l32 = List("A1", "A2")
     val l33: List[String] = Nil
@@ -48,11 +57,15 @@ object Examples {
         println(" ")
         val (f2, mAll, vars) = synthesis.bapa.Algorithm.step2and3(f1, x ::: y)
         print_BAPAFormula(f2)
+        val freshNo = true
         println(" ")
-        val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x, true)
+        val (f3, lt) = synthesis.bapa.Algorithm.step4(mAll, x, freshNo)
         print_BAPAFormula(f3)
         println(" ")
-   //     synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll)
+        val (f4, outputVars, listOfAssignments) = synthesis.bapa.Algorithm.step5(x, y, k, l, vars, f2, f3, mAll, freshNo)
+print_BAPAFormula(f4)
+println(outputVars)
+println(listOfAssignments)
      }
      println("finished!")
    }
@@ -62,7 +75,8 @@ object Examples {
   def runExamples() {
     run(" find a set that contains A and it is smaller than B", t1)
     run(" find a set that is contained in B1 and in B2 and had at least 2 elements", t2)
-    run(" find two similar size partitions of S", t3)
+    run(" find a two partitions of set S ", t3)
+    run(" find a set that has more elements than A", t4)
   }
 
 

@@ -116,5 +116,13 @@ object Printer {
       println(" ")
     }
   }
+
+
+/*  def print_SetAssignment(sa: SetAssignment): Unit = sa match {
+    case Take(s, i, fs) => {
+      Console.print(s + " = take(")
+      Console.print(i)
+
+  } */
 }
 

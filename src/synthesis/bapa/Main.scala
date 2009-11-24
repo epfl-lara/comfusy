@@ -1,6 +1,6 @@
 //	piskac@larapc01:~/guru$ pwd
 //	/home/piskac/guru
-//	piskac@larapc01:~/guru$ scalac -d bin/ src/synthesis/bapa/*.scala
+//	piskac@larapc01:~/guru$ scalac -d bin/ synthesis-plugin/src/synthesis/bapa/*.scala  synthesis-plugin/src/synthesis/Arithmetic.scala
 //	piskac@larapc01:~/guru$ scala -cp bin/ synthesis.bapa.Main
 
 
