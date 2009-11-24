@@ -22,6 +22,7 @@ object PASynthesisExamples {
     hourMinutSecondExample()
     balancedProblem()
     dividesExample()
+    HourMinutSecondUnique()
   }
   
   def hourMinutSecondExample() {
@@ -35,6 +36,25 @@ object PASynthesisExamples {
       && m >= 0 && m < 60
     )
     val solution = PASynthesis.solve("getHourMinutSeconds", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def HourMinutSecondUnique() {
+    val seconds = O("seconds")
+    val s1 = O("s1")
+    val m1 = O("m1")
+    val h1 = O("h1")
+    val s2 = O("s2")
+    val m2 = O("m2")
+    val h2 = O("h2")
+    val condition = seconds === s1 + (m1 * 60) + (h1*3600) && seconds === s2 + (m2 * 60) + (h2*3600) &&
+      s1 >= 0 && s1 < 60 &&
+      m1 >= 0 && m1 <= 60 &&
+      s2 >= 0 && s2 < 60 &&
+      m2 >= 0 && m2 <= 60 &&
+      ((s1 > s2) || (s2 > s1) || (m1 > m2) || (m2 > m1) || (h1 > h2) || (h2 > h1)) 
+    
+    val solution = PASynthesis.solve("HourMinutSecondUnique", condition)
     println(solution._1)
     println(solution._2)
   }

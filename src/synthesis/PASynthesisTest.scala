@@ -125,8 +125,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve("overconstrained", pac1, pac2)
       println(solution._1)
       println(solution._2)
-      solution._1 should equal (PACondition((x0,PADivision(PACombination(b),2))::Nil,
-              PAConjunction(PAEqualZero(PACombination(0,List((2,c), (3,x0)),List()))::PADivides(2,PACombination(b))::Nil)))
+      solution._1.execute(Map[InputVar, Int]() + (b -> -2)+ (c -> 3)) should equal (false)
+      solution._1.execute(Map[InputVar, Int]() + (b -> -4)+ (c -> 3)) should equal (true)
+      solution._1.execute(Map[InputVar, Int]() + (b -> -3)+ (c -> 3)) should equal (false)
+      solution._1.execute(Map[InputVar, Int]() + (b -> -4)+ (c -> 4)) should equal (false)
+      solution._1.execute(Map[InputVar, Int]() + (b -> -2)+ (c -> 4)) should equal (false)
+      solution._1.execute(Map[InputVar, Int]() + (b -> 4)+ (c -> -3)) should equal (true)
     }
     it("should solve trivial unsatisfiable equations") {
       val pac1 = b+(x*2) === 0
@@ -325,6 +329,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       mapping(s) should equal (51)
       mapping(m) should equal (58)
       mapping(h) should equal (-1)
+    }
+    it("should not produce empty if-then-else") {
+      val condition = x*3 >= b && x*2 <= c && x*5 >= b-c && x*7 <= b*2+c
+      val solution = PASynthesis.solve("NoEmptyIfthenElse", condition)
+      println(solution._1)
+      println(solution._2)
     }
   }
 }
