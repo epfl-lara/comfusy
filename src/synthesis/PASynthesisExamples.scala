@@ -19,10 +19,13 @@ object PASynthesisExamples {
   val d = I("d")
 
   def main(args : Array[String]) : Unit = {
-    hourMinutSecondExample()
-    balancedProblem()
-    dividesExample()
+    //hourMinutSecondExample()
+    //balancedProblem()
+    //dividesExample()
     HourMinutSecondUnique()
+    //ifExample()
+    //inverseFunction()
+    //weispfennig()
   }
   
   def hourMinutSecondExample() {
@@ -79,6 +82,29 @@ object PASynthesisExamples {
     val pac1 = PADivides(5, PACombination(b)+PACombination(y))
     val pac2 = PADivides(7, PACombination(c)+PACombination(y))
     val solution = PASynthesis.solve("divides5And7", pac1::pac2::Nil)
+    println(solution._1)
+    println(solution._2)
+  }
+  
+  def ifExample() {
+    val condition = b === y*3+x && x <= 3 && x >= -3 && ((x > y) || (x < y))
+    val solution = PASynthesis.solve("different_decomposition", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def inverseFunction() {
+    val y = I("y")
+    val condition = (y === x*6+4 && x < -1) || (y === x*2 && x >= -1 && x <= 1) || (y === x*6-4 && x > 1)  
+    val solution = PASynthesis.solve("inverseFunction", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def weispfennig() {
+    val x = I("x")
+    val a = I("a")
+    val y = O("y")
+    val condition = y*2 >= 0 && y*2 <= 5 && PADivides(5, x-y)   
+    val solution = PASynthesis.solve("weispfennig", condition)
     println(solution._1)
     println(solution._2)
   }

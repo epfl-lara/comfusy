@@ -411,14 +411,14 @@ object PASynthesis {
           pap.innerScalaContent(indent)
         case ((cond, pap)::_::q) =>
           indent + "val "+pap.resultScalaContent("")+" = "+
-          (programs map {
+          ((programs map {
             case (cond, pap) =>
               val prog_if = "if("+(cond.conditionToScalaString)+") {"
               val prog_ifthen = pap.innerScalaContent(indent2)
               val prog_ifthenresult = pap.resultScalaContent(indent2)
               val prog_ifend = indent + "}"
               (prog_if::prog_ifthen::prog_ifthenresult::prog_ifend::Nil).reduceLeft(combineSentences(_, _))
-          }).reduceLeft( _ + " else " + _)
+          })++(("throw new Error(\"No solution exists\")")::Nil)).reduceLeft( _ + " else " + _)
       })
     }
   }
