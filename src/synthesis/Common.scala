@@ -2,21 +2,46 @@ package synthesis
 
 object Common {
   
+  sealed abstract class BezoutType
+  case class OTBezout() extends BezoutType // Home-made
+  case class MMBezout() extends BezoutType // Made manually.
+  
+  var computing_mode:BezoutType = MMBezout()
+  
+  def bezout(e: Int, a : List[Int]):List[Int] = {
+    computing_mode match {
+      case OTBezout() => bezoutOT(e, a)
+      case MMBezout() => bezoutMM(a, e / gcdlist(a))
+    }
+  }
+  def bezoutWithBase(e: Int, a: List[Int]): (List[List[Int]]) = {
+    computing_mode match {
+      case OTBezout() => bezoutWithBaseOT(e, a)
+      case MMBezout() => bezoutWithBaseMM(e, a)
+    }
+  }
+
+  /// Shortcuts
   def bezout(e: Int, a : Int*): List[Int] = bezout(e, a.toList)
+  def bezoutWithBase(e: Int, a : Int*): List[List[Int]] = bezoutWithBase(e, a.toList)
+  
+  /*
+   * Algorithms derived from the Omega-tests
+   */                                                                    
   
   // Finds a vector x such that x.a + e is 0 if this is possible.
-  def bezout(e: Int, a : List[Int]):List[Int] = {
+  def bezoutOT(e: Int, a : List[Int]):List[Int] = {
     a match {
       case Nil => Nil
       case 0::Nil => 0::Nil
       case k::Nil => ((-e + smod(e, k))/k) :: Nil
       case a =>
-        val a_indexed:List[(Int, Int)] = (a.indices zip a)
+        val a_indexed:List[(Int, Int)] = (a.indices zip a).toList
         (a_indexed find (_._2 == 0)) match {
           case Some((index, element)) =>
           // Takes the result when removing the zeros, then inserts some zeros.
             val a_filtered = a remove (_==0)
-            val a_filtered_solved = bezout(e, a_filtered )
+            val a_filtered_solved = bezoutOT(e, a_filtered )
             val (_, a_solved) = a.foldLeft((a_filtered_solved, Nil:List[Int]))((_,_) match { 
               case ((q, l), 0)    => (q, 0::l)
               case ((Nil, l), k)  => (Nil, l) // This should not happen, as we have many zeroes.
@@ -46,7 +71,7 @@ object Common {
                 // the coefficient at index 'index+1' is now 0, so it will be removed.
                 
                 // Now, there is at least one zero in new_a
-                bezout(new_e, new_a) match {
+                bezoutOT(new_e, new_a) match {
                   case Nil => throw new Error("Should not happen, the size of the input and output are the same")
                   case q@(w::l) =>
                     l.splitAt(index) match {
@@ -63,8 +88,8 @@ object Common {
         }
     }
   }
-
-  def enumerate[A](a: List[A]):List[(Int, A)] = (a.indices zip a)
+  
+  def enumerate[A](a: List[A]):List[(Int, A)] = (a.indices zip a).toList
   
   // a is an indexed list
   def replaceElementAtIndexByCoef(a: List[(Int, Int)], index: Int, coef: Int) = a map { _ match {
@@ -107,13 +132,13 @@ object Common {
     (a zip b).foldLeft(0){case (result, (e_a, e_b)) => result + e_a * e_b}
   }
   
-  def bezoutWithBase(e: Int, a : Int*): List[List[Int]] = bezoutWithBase(e, a.toList)
+  
   // If size(a) == n, finds a matrix x of size n x n
   // such that (1, k1, k2, .. kn-1).x.a + e = 0 if this is possible,
   // and x describes all integer solutions of this equation. Rank(x) = n-1
   // Output representation : it's the list of rows.
   //                               n          n     n
-  def bezoutWithBase(e: Int, a: List[Int]): (List[List[Int]]) = {
+  def bezoutWithBaseOT(e: Int, a: List[Int]): (List[List[Int]]) = {
     a match {
       case Nil => Nil
       case 0::Nil => ((0::Nil)::Nil)
@@ -189,11 +214,97 @@ object Common {
                         }
                     }
                     v_reduced
-                  }
                 }
             }
         }
     }
+  }
+
+  /*
+   * Hand-made algorithms.
+   */       
+  
+  // Finds (x1, x2, k) such that x1.a + x2.b +  gcd(a,b) = 0 and k = 
+  // gcd(a ,b)
+  def advancedEuclid(a_in: Int, b_in: Int):(Int, Int, Int) = {
+    var (x, lastx) = (0, 1)
+    var (y, lasty) = (1, 0)
+    var (a, b) = (a_in, b_in)
+    var (quotient, temp) = (0, 0)
+    while(b != 0) {
+        val amodb = (Math.abs(b) + a%b)%b
+        quotient = (a - amodb)/b
+        a = b
+        b = amodb
+        temp = x
+        x = lastx-quotient*x
+        lastx = temp
+        temp = y
+        y = lasty-quotient*y
+        lasty = temp
+    }
+    if(a < 0)
+      return (lastx, lasty, -a)
+    else
+      return (-lastx, -lasty, a)
+  }
+  
+  // Finds coefficients x such that k*gcd(a_in) + x.a_in = 0
+  def bezoutMM(a_in: List[Int], k: Int):List[Int] = {
+    var a = a_in
+    var result:List[Int] = Nil
+    var last_coef = -1
+    while(a != Nil) {
+      a match {
+        case Nil => 
+        case 0::Nil  =>
+          result = 0::result 
+          a = Nil
+        case el::Nil =>
+          // Solution is -el/abs(el)
+          result = (k*(-last_coef * (-el/Math.abs(el))))::result
+          a = Nil
+        case (el1::el2::Nil) =>
+          val (u, v, _) = advancedEuclid(el1, el2)
+          result = (-v*k*last_coef)::(-u*k*last_coef)::result
+          a = Nil
+        case (el1::q) =>
+          val el2 = gcdlist(q)
+          val (u, v, _) = advancedEuclid(el1, el2)
+          result = (-u*k*last_coef)::result
+          last_coef = -v*last_coef
+          a = q
+      }
+    }
+    result.reverse
+  }
+  
+  // Finds coefficients x such that gcd(a_in) + x.a_in = 0
+  def bezoutMM(a_in: List[Int]):List[Int] = bezoutMM(a_in, 1)
+
+  
+  def bezoutWithBaseMM(e: Int, a: List[Int]): (List[List[Int]]) = {
+    var coefs = a
+    var coefs_gcd = coefs.foldRight(Nil:List[Int]){
+      case (i, Nil) => List(i)
+      case (i, a::q) => gcd(a, i)::a::q
+    }
+    var n = a.length
+    var result = List(bezoutMM(a, e/coefs_gcd.head)) // The gcd of all coefs divides e.
+    var i = 1
+    var zeros:List[Int] = Nil
+    while(i <= n-1) {
+      val kii = coefs_gcd.tail.head / coefs_gcd.head
+      val kijs = bezoutMM(coefs.tail, coefs.head/coefs_gcd.head)
+      result = (zeros ::: (kii :: kijs))::result
+      coefs     = coefs.tail
+      coefs_gcd = coefs_gcd.tail
+      zeros     = 0::zeros
+      i += 1
+    }
+    result.reverse
+  }
+  
   
   def smod(x:Int, m_signed:Int) = {
     val m = Math.abs(m_signed)
@@ -221,16 +332,26 @@ object Common {
     else x * y / gcd(x, y)
   }
   // Computes the LCM over a list  of numbers
+  // Do not handle correctly zero numbers.
   def lcmlist(l:List[Int]):Int = l match {
     case Nil => 1
-    case a::Nil => a
+    case 0::q => lcmlist(q)
+    case a::Nil => if(a < 0) -a else a
     case (a::b::q) => lcmlist(lcm(a,b)::q)
   }
   // Computes the GCD over a list  of numbers
+  // Do not handle zero numbers.
   def gcdlist(l:List[Int]):Int = l match {
-    case Nil => 1
-    case 0::Nil => 1
-    case a::Nil => lcm(a, 1)
+    case Nil => throw new Exception("Cannot compute GCD of nothing")
+    case 0::Nil => throw new Exception("Cannot compute GCD of zero")
+    case a::Nil => if(a < 0) -a else a
     case (a::b::q) => gcdlist(gcd(a,b)::q)
+  }
+  // None represents infinity
+  def gcdlistComplete(l:List[Int]):Option[Int] = l match {
+    case Nil => None
+    case 0::q => gcdlistComplete(q)
+    case a::Nil => if(a < 0) Some(-a) else Some(a)
+    case (a::b::q) => gcdlistComplete(gcd(a, b)::q) 
   }
 }
