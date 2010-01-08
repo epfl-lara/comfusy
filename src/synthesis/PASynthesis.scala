@@ -264,8 +264,12 @@ object PASynthesis {
       PACombination(coefficient, input_affine2 remove (_._1 == 0), output_affine2 remove (_._1 == 0))
     }
     def normalized: PACombination = {
-      val gcd = Common.gcdlist(coefficient :: ((input_affine map (_._1)) ++ (output_affine map (_._1))))
-      PACombination(coefficient, input_affine, output_affine)/gcd
+      this match {
+        case PACombination(0, Nil, Nil) => this
+        case _ =>
+          val gcd = Common.gcdlist(coefficient :: ((input_affine map (_._1)) ++ (output_affine map (_._1))))
+          PACombination(coefficient, input_affine, output_affine)/gcd
+      }
     }
     
     /// Division of this combination by an integer
