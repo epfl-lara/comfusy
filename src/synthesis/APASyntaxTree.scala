@@ -1,8 +1,5 @@
 package synthesis
 
-// dummy, to make Ant happy
-object APASyntaxTree
-
 /// ************* Abstract syntax tree ***************///
 trait APAVariable
 
@@ -139,6 +136,15 @@ abstract sealed class APAExpression {
   def toPythonString = {
     toStringGeneral(RenderingPython())
   }
+  
+  /** Method to assume signs of input terms.
+   * 
+   * To assume all occurences of the variable b to be >= 0 in myterm, call :
+   *   myterm.assumeSignInputTerm(InputVar("b").toInputTerm, ASign(1, 1, 0))
+   * To assume all occurences of the variable b to be <= 0 in myterm, call :
+   *   myterm.assumeSignInputTerm(InputVar("b").toInputTerm, ASign(0, 1, 1))
+  */
+  def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAExpression
 }
 
 abstract sealed class APAFormula extends APAExpression {
@@ -224,6 +230,7 @@ abstract sealed class APAFormula extends APAExpression {
     case APAFalse() => FormulaSplit(Nil, APAFalse()::Nil, Stream.empty)
     case APANegation(f) => throw new Error("Negation is not supported yet") 
   }
+  def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAFormula
 }
 
 object FormulaSplit {
@@ -379,8 +386,8 @@ object APACombination {
 case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInputTerm, OutputVar)]) extends APATerm with CoefficientAbstraction {
   if(output_linear == Nil) {
     setNoCoefficients()
-  } else if(output_linear exists { case (APAInputCombination(i, Nil), _) if i != 0 => true; case _ => false}) {
-    setNotAllCoefficientsAreNul()
+  } else if(output_linear exists { case (i, _) if i.isNotZero => true; case _ => false}) {
+    setNotAllCoefficientsAreZero()
   }
   def normalClone():this.type = APACombination(const_part, output_linear).asInstanceOf[this.type]
   // Sorting functions
@@ -434,7 +441,7 @@ case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInpu
   /// Multiplication by an integer
   def *(i : Int): APACombination = {
     val result = APACombination(const_part * APAInputCombination(i), output_linear map {t => (t._1 * APAInputCombination(i), t._2)})
-    result.multCoefficientAbstraction(this, i)
+    result.assumeMultCoefficientAbstraction(this, i)
   }
   /// Multiplication by an APAInputTerm
   def *(i : APAInputTerm): APACombination = {
@@ -444,7 +451,7 @@ case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInpu
   def +(pac : APACombination): APACombination = pac match {
     case APACombination(c, o) => 
       val result = APACombination(const_part + c, output_linear ++ o).simplified
-      result.addCoefficientAbstraction(this)
+      result.assumeSumCoefficientAbstraction(this, pac)
   }
   /// Substraction between two combinations
   def -(that : APACombination): APACombination = this + (that * (-1))
@@ -550,12 +557,18 @@ case class APAFalse() extends APAEquation {
 case class APAConjunction(eqs : List[APAFormula]) extends APAFormula {
   override def replace(y: OutputVar, t: APACombination): APAFormula = APAConjunction(eqs map (_.replace(y, t))).simplified
   override def replace(y: InputVar,  t: APAInputTerm):   APAFormula = APAConjunction(eqs map (_.replace(y, t))).simplified
+  def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAFormula = 
+    APAConjunction(eqs map (_.assumeSignInputTerm(t1, s))).simplified
 }
 case class APADisjunction(eqs : List[APAFormula]) extends APAFormula {
   override def replace(y: OutputVar, t: APACombination): APAFormula = APADisjunction(eqs map (_.replace(y, t))).simplified
   override def replace(y: InputVar,  t: APAInputTerm):   APAFormula = APADisjunction(eqs map (_.replace(y, t))).simplified
+  def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAFormula = 
+    APADisjunction(eqs map (_.assumeSignInputTerm(t1, s))).simplified
 }
 case class APANegation(eq: APAFormula) extends APAFormula {
   override def replace(y: OutputVar, t: APACombination): APAFormula = APANegation(eq.replace(y, t)).simplified
   override def replace(y: InputVar,  t: APAInputTerm):   APAFormula = APANegation(eq.replace(y, t)).simplified
+  def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAFormula = 
+    APANegation(eq.assumeSignInputTerm(t1, s)).simplified
 }

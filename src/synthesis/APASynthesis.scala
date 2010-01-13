@@ -303,11 +303,11 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             // Continue to CONTINUE_POINT
           case n =>
             val coefs_are_zero = APAConjunction(o1_coefs map (APACombination(_)===APAInputCombination(0))).simplified
-            if(coefs_are_zero == APATrue() || pac.allCoefficientsAreNull) {
+            if(coefs_are_zero == APATrue() || pac.allCoefficientsAreZero) {
               // We add the precondition const_part == 0
               addPrecondition(APACombination(const_part)===APAInputCombination(0))
               return solveEqualities(FormulaSplit(rest_equalities, non_equalities, remaining_disjunctions))
-            } else if(coefs_are_zero == APAFalse() || pac.notAllCoefficientsAreNull) {
+            } else if(coefs_are_zero == APAFalse() || pac.notAllCoefficientsAreZero) {
               // Regular run. We know that the GCD of the numbers is positive.
               addPrecondition(APADivides(n, APACombination(const_part, Nil)))
               val x = getNewInputVar()
@@ -328,9 +328,9 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
               const_part = APAInputCombination(0, (1, x)::Nil)
               o1_coefs = o1_coefs map (APAInputDivision(_, gcd_expr).simplified)
             } else {
-              var (cond1, prog1) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeAllCoefficientsAreNull) :: rest_equalities ++ non_equalities) // Case where the coefficients are null.
+              var (cond1, prog1) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeAllCoefficientsAreZero) :: rest_equalities ++ non_equalities) // Case where the coefficients are null.
               cond1 = cond1.assumeBefore(coefs_are_zero)
-              var (cond2, prog2) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeNotAllCoefficientsAreNull)  :: rest_equalities ++ non_equalities) //solve with the knowledge that not all the coefficients are null. 
+              var (cond2, prog2) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeNotAllCoefficientsAreZero)  :: rest_equalities ++ non_equalities) //solve with the knowledge that not all the coefficients are null. 
               cond2 = cond2.assumeBefore(APANegation(coefs_are_zero))
               return APACaseSplit.optimized((cond1, prog1)::(cond2, prog2)::Nil)
             }

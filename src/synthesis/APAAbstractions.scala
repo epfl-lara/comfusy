@@ -82,12 +82,12 @@ object SignAbstraction {
   }
 }
 
-/** Class <code>SignAbstraction</code> represents a sign abstraction (>0, =0 and <0)
+/** Class <code>SignAbstraction</code> represents a sign abstraction (>0, =0 and <0).
  *  Any class that extends it should implement the method <code>normalClone()</code>
  *  returning a clone from itself.
  *  The following methods are available:
  *  - Methods assume* (assumeZero, assumePositive...) to clone the expression with a more specialized abstraction 
- *  - Methods is* (isPositive, isNegativeZero) which check if the sign abstraction capacities.
+ *  - Methods is* (isPositive, isNegativeZero) which check the sign abstraction capacities.
  *  - The method <codep>ropagateSign</code> can be overriden to propagate sign properties to sub-expressions.
  *
  *  @author  Mikaël Mayer
@@ -232,7 +232,7 @@ trait SignAbstraction {
   //@}
   
   //@{ Methods to specialize
-  /// A cloning method to be implemented in order to use this class.
+  /// A cloning method to implement in order to use this class.
   def normalClone():this.type
   
   /// A method which processes the sign propagation of an expression.
@@ -258,59 +258,116 @@ case class PositiveZeroSign() extends SignAbstraction {
   def normalClone():this.type = PositiveZeroSign().asInstanceOf[this.type]
 }
 
-/*****************************
- *  Coefficient abstraction  *
- *****************************/
-
+/** Class <code>CoefficientAbstraction</code> represents an all-zero coefficients abstraction.
+ *  The coefficients of a linear combination c_0 + c_1*y_1 + ... c_n*y_n are (c_1, ..., c_n)
+ *  Any class that extends <code>CoefficientAbstraction</code> should implement the method <code>normalClone()</code>
+ *  returning a clone from itself.
+ *  The following methods are available:
+ *  - Methods assume* (assumeAllCoefficientsAreZero, ...) to clone the expression with a more specialized abstraction 
+ *  - Checks Methods (allCoefficientsAreZero ...) which check the coefficient abstraction capacities.
+ *
+ *  @author  Mikaël Mayer
+ */
 trait CoefficientAbstraction {
-  // Simple >0, =0 and <0 abstraction
-  private var p_allCoefficientsAreNull:    Boolean = false
-  private var p_notAllCoefficientsAreNull: Boolean = false
-  def allCoefficientsAreNull    =  p_allCoefficientsAreNull
-  def notAllCoefficientsAreNull =  p_notAllCoefficientsAreNull
+
+  //@{ Private section
+  /// Private variables containing the abstraction.
+  private var p_allCoefficientsCanBeZero:    Boolean = true
+  private var p_oneCoefficientsCanBeNonZero: Boolean = true
   
-  def normalClone():this.type
-    
-  def cloneWithCoefficientAbstraction(c: CoefficientAbstraction):this.type = {
-    this.cloneWithCoefficientAbstraction(c.allCoefficientsAreNull, c.notAllCoefficientsAreNull)
+  private def cloneWithCoefficientAbstraction(c: CoefficientAbstraction):this.type = {
+    this.cloneWithCoefficientAbstraction(c.p_allCoefficientsCanBeZero, c.p_oneCoefficientsCanBeNonZero)
   }
-  def cloneWithCoefficientAbstraction(allCoefficientsAreNull_ : Boolean, notAllCoefficientsAreNull_ : Boolean):this.type = {
+  private def cloneWithCoefficientAbstraction(allCoefficientsCanBeZero_ : Boolean, oneCoefficientsCanBeNonZero_ : Boolean):this.type = {
     val result = normalClone().asInstanceOf[CoefficientAbstraction]
-    result.setCoefficients(allCoefficientsAreNull_, notAllCoefficientsAreNull_)
+    result.setCoefficients(allCoefficientsCanBeZero_, oneCoefficientsCanBeNonZero_)
     result.asInstanceOf[this.type]
   }
+  //@}
   
-  private def setCoefficients(a: Boolean, n: Boolean) = {
-    p_allCoefficientsAreNull = a
-    p_notAllCoefficientsAreNull = n
-  }
-  
-  def assumeAllCoefficientsAreNull : this.type = {
-    cloneWithCoefficientAbstraction(true, false)
-  }
-  def assumeNotAllCoefficientsAreNull : this.type = {
-    cloneWithCoefficientAbstraction(false, true)
-  }
-  protected def setNotAllCoefficientsAreNul() = {
+  //@{ Protected section
+  /// A direct method to set up coefficient abstraction
+  /// Used by subclasses methods only.
+  protected def setNotAllCoefficientsAreZero() = {
     setCoefficients(false, true)
   }
+
+  /// A direct method to set up coefficient abstraction
+  /// Used by subclasses methods only.
   protected def setNoCoefficients() = {
     setCoefficients(true, true)
   }
-  def propagateCoefficientAbstraction(o : CoefficientAbstraction):this.type = {
-    cloneWithCoefficientAbstraction(allCoefficientsAreNull    || o.allCoefficientsAreNull,
-                                    notAllCoefficientsAreNull || o.notAllCoefficientsAreNull)
+  
+  /// A direct method to set up coefficient abstraction
+  /// Used by subclasses methods only.
+  protected def setCoefficients(a: Boolean, n: Boolean) = {
+    p_allCoefficientsCanBeZero = a
+    p_oneCoefficientsCanBeNonZero = n
   }
-  def addCoefficientAbstraction(o: CoefficientAbstraction):this.type = {
-    if(allCoefficientsAreNull && o.allCoefficientsAreNull) {
-      assumeAllCoefficientsAreNull
+  
+  /// A method to clone the expression with the knowledge of another coefficient abstraction. 
+  protected def propagateCoefficientAbstraction(o : CoefficientAbstraction):this.type = {
+    cloneWithCoefficientAbstraction(allCoefficientsCanBeZero    && o.allCoefficientsCanBeZero,
+                                    oneCoefficientsCanBeNonZero &&  o.oneCoefficientsCanBeNonZero)
+  }
+  //@}
+  
+  //@{ Coefficient check methods
+  /// Returns true if all the coefficients are zero.
+  def allCoefficientsAreZero    =  p_allCoefficientsCanBeZero && !p_oneCoefficientsCanBeNonZero
+  
+  /// Returns true if not all the coefficients are zero.
+  def notAllCoefficientsAreZero =  p_oneCoefficientsCanBeNonZero && !p_allCoefficientsCanBeZero
+  
+  /// Returns true if all the coefficients are zero.
+  def allCoefficientsCanBeZero    =  p_allCoefficientsCanBeZero
+  
+  /// Returns true if not all the coefficients are zero.
+  def oneCoefficientsCanBeNonZero =  p_oneCoefficientsCanBeNonZero
+  //@}
+
+  //@{ Assuming coefficients methods
+  /// Assumes that all coefficients are zero
+  def assumeAllCoefficientsAreZero : this.type = {
+    propagateCoefficientAbstraction(ACoef(true, false))
+  }
+  
+  /// Assumes that not all coefficients are zero
+  def assumeNotAllCoefficientsAreZero : this.type = {
+    cloneWithCoefficientAbstraction(ACoef(false, true))
+  }
+  
+  /// Assumes a coefficient abstraction of a sum
+  def assumeSumCoefficientAbstraction(a: CoefficientAbstraction, o: CoefficientAbstraction):this.type = {
+    if(a.allCoefficientsAreZero && o.allCoefficientsAreZero) {
+      assumeAllCoefficientsAreZero
+    } else if(a.allCoefficientsAreZero) {
+      propagateCoefficientAbstraction(o)
+    } else if(o.allCoefficientsAreZero) {
+      propagateCoefficientAbstraction(a)
     } else this
   }
-  def multCoefficientAbstraction(o: CoefficientAbstraction, i: Int):this.type = {
+  
+  /// Assumes a coefficient abstraction of a multiplication by an integer
+  def assumeMultCoefficientAbstraction(o: CoefficientAbstraction, i: Int):this.type = {
     if(i==0) {
-      assumeAllCoefficientsAreNull
+      assumeAllCoefficientsAreZero
     } else {
       propagateCoefficientAbstraction(o)
     }
   }
+  //@}
+
+  
+  //@{ Methods to specialize
+  /// A cloning method to implement in order to use this class.
+  def normalClone():this.type
+  //@}
+}
+
+/** The simplest class to implement a coefficient abstraction.
+ */
+case class ACoef(a: Boolean, n: Boolean) extends CoefficientAbstraction {
+  setCoefficients(a, n)
+  def normalClone():this.type = ACoef(a, n).asInstanceOf[this.type]
 }
