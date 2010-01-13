@@ -56,9 +56,9 @@
             </classpath>
 	    <exclude name="**/APA*.scala" />
             <exclude name="**/PASynthesisTest.scala" />
-            <exclude name="**/bapa/BAPASyn-Examples.scala" />
-            <exclude name="**/bapa/BAPASyn-Printer.scala" />
-            <exclude name="**/bapa/BAPASyn-synthesis.scala" />
+            <exclude name="**/bapa/Examples.scala" />
+            <exclude name="**/bapa/Printer.scala" />
+            <exclude name="**/bapa/Main.scala" />
         </scalac>
     </target>
 
