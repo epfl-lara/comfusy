@@ -1,5 +1,8 @@
 package synthesis
 
+// dummy, to make Ant happy
+object APASyntaxTree
+
 /// ************* Abstract syntax tree ***************///
 trait APAVariable
 

@@ -582,6 +582,10 @@ trait ChooseTransformer
       }
     }
 
+    def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
+      None
+    }
+
     // tries to extract a formula about (immutable) sets, possibly with
     // arithmetic stuff in it as well
     // the first set contains the set variables we encountered, the second the integer variables

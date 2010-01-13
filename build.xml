@@ -54,7 +54,7 @@
             <classpath>
                 <path refid="build.path" />
             </classpath>
-	    <exclude name="**/APA*.scala" />
+            <!-- <exclude name="**/APA*.scala" /> -->
             <exclude name="**/PASynthesisTest.scala" />
             <exclude name="**/bapa/Examples.scala" />
             <exclude name="**/bapa/Printer.scala" />
