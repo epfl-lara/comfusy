@@ -252,6 +252,10 @@ object Common {
   // Finds coefficients x such that k*gcd(a_in) + x.a_in = 0
   def bezoutMM(a_in: List[Int], k: Int):List[Int] = {
     var a = a_in
+    var a_in_gcds = a_in.foldRight(Nil:List[Int]){
+      case (i, Nil) => List(i)
+      case (i, a::q) => gcd(a, i)::a::q
+    }
     var result:List[Int] = Nil
     var last_coef = -1
     while(a != Nil) {
@@ -269,11 +273,12 @@ object Common {
           result = (-v*k*last_coef)::(-u*k*last_coef)::result
           a = Nil
         case (el1::q) =>
-          val el2 = gcdlist(q)
+          val el2 = a_in_gcds.tail.head
           val (u, v, _) = advancedEuclid(el1, el2)
           result = (-u*k*last_coef)::result
           last_coef = -v*last_coef
           a = q
+          a_in_gcds = a_in_gcds.tail
       }
     }
     result.reverse
@@ -286,7 +291,7 @@ object Common {
   def bezoutWithBaseMM(e: Int, a: List[Int]): (List[List[Int]]) = {
     var coefs = a
     var coefs_gcd = coefs.foldRight(Nil:List[Int]){
-      case (i, Nil) => List(i)
+      case (i, Nil) => List(Math.abs(i))
       case (i, a::q) => gcd(a, i)::a::q
     }
     var n = a.length
@@ -324,8 +329,28 @@ object Common {
     else if (y<0) gcd(x, -y)
     else gcd(y%x, x)
   }
-  // Computes the LCM between two numbers
   
+  // Computes the GCD between two numbers. Binary speed-up.
+  def binaryGcd(a:Int, b:Int):Int = {
+    var g = 1
+    var (u, v) = (a, b)
+    while(u%2 == 0 && v%2 == 0) {
+      u = u/2
+      v = v/2
+      g = 2*g
+    }
+    while(u != 0) {
+      if(u % 2 == 0) u = u/2
+      else if(v % 2 == 0) v = v/2
+      else {
+        val t = Math.abs(u-v)/2
+        if(u >= v) u = t else v = t
+      }
+    }
+    return g*v;
+  }
+  
+  // Computes the LCM between two numbers
   def lcm(x: Int, y: Int): Int = {
     if(x < 0) lcm(-x, y)
     else if(y < 0) lcm(x, -y)

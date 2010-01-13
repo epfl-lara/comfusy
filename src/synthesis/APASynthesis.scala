@@ -122,10 +122,10 @@ object APASynthesis {
   def newInputVariable(input_existing: List[InputVar], output_existing : List[OutputVar]): InputVar = {
     var i = 0
     val names = (input_existing map (_.name)) ++ (output_existing map (_.name))
-    while(names contains ("K"+i)) {
+    while(names contains ("k"+i)) {
       i+=1
     }
-    InputVar("K"+i)
+    InputVar("k"+i)
   }
   
   // Split the list into APAEqualZero one left and not APAEqualZero on right
@@ -288,7 +288,9 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     val sorted_equalities = interesting_equalities sort by_least_outputvar_coef
     
     sorted_equalities match {
-      case Nil => solveEquations(FormulaSplit(Nil, non_equalities, remaining_disjunctions))
+      case Nil =>
+        val newfs = FormulaSplit(Nil, non_equalities, remaining_disjunctions)
+        solveEquations(newfs)
       case (eq1@APAEqualZero(pac@APACombination(c1, o1)))::rest_equalities =>
         var const_part:APAInputTerm = c1
         var o1_coefs = o1 map (_._1)
@@ -391,7 +393,8 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             delOutputVar(v)
         }
         //var new_remaining_disjunctions = remaining_disjunctions map (_.replaceList(assignments))
-        solveEqualities(FormulaSplit(rest_equalities, non_equalities, remaining_disjunctions).replaceList(assignments))
+        val newfs = FormulaSplit(rest_equalities, non_equalities, remaining_disjunctions).replaceList(assignments)
+        solveEqualities(newfs)
     }
   }
   
@@ -455,7 +458,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                 val result = remaining map (_.assumeSignInputTerm(t1, s))
                 result
               }
-              (if(k.pos) { // k can be positive
+              (if(k.can_be_positive) { // k can be positive
                 val k_positive = k.assumeSign(1)
                 assert(k_positive.isPositive)
                 val new_l_formulas = (APACombination(k)   >  APAInputCombination(0))::l_formulas
@@ -465,7 +468,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                 val new_q = replaceRemaining(q, k, k_positive)
                 getInequalitiesForVariable_aux(v, new_q, (new_l_formulas, new_l_left, new_l_right, new_l_remaining))
               } else Stream()) append
-              (if(k.nul) { // k can be zero
+              (if(k.can_be_zero) { // k can be zero
                 val k_nul = APAInputCombination(0)
                 assert(k_nul.isZero)
                 val new_l_formulas = (APACombination(k) === APAInputCombination(0))::l_formulas
@@ -475,7 +478,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                 val new_q = replaceRemaining(q, k, k_nul)
                 getInequalitiesForVariable_aux(v, new_q, (new_l_formulas, new_l_left, new_l_right, new_l_remaining))
               } else Stream()) append
-              (if(k.neg) { // k can be negative
+              (if(k.can_be_negative) { // k can be negative
                 val k_negative = k.assumeSign(-1)
                 val mk_negative = -k_negative
                 assert(mk_negative.isPositive)

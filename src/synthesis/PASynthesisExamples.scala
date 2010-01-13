@@ -22,7 +22,8 @@ object PASynthesisExamples {
     //hourMinutSecondExample()
     //balancedProblem()
     //dividesExample()
-    HourMinutSecondUnique()
+    //HourMinutSecondUnique()
+    problemExample()
     //ifExample()
     //inverseFunction()
     //weispfennig()
@@ -104,6 +105,29 @@ object PASynthesisExamples {
     val a = I("a")
     val y = O("y")
     val condition = y*2 >= 0 && y*2 <= 5 && PADivides(5, x-y)   
+    val solution = PASynthesis.solve("weispfennig", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def problemExample() {
+    val maxDiff = I("maxDiff")
+    val c0 = I("c0")
+    val h001 = O("h001")
+    val h000 = O("h000")
+    val h011 = O("h011")
+    val h010 = O("h010")
+    val h111 = O("h111")
+    val h110 = O("h110")
+    val h101 = O("h101")
+    val h100 = O("h100")
+
+      
+    val condition = (h101 >= 0 && h000 >= 0 && h011 >= 0 && h001 >= 0 && h110 >= 0 && h111 >= 0 && h100 >= 0 && h010 >= 0 &&
+                     maxDiff-h101+h010-h001+h110 >= 0 &&
+                     maxDiff+h101-h010+h001-h110 >= 0 &&
+                     h010+h001+h011 === 0 &&
+                     h100 === 0 && h111+h011 === 0 && h000 === 0 && h011 === 0 && h001 === 0 && h010 === 0 &&
+                     -c0+h101+h100+h111+h110 === 0)
     val solution = PASynthesis.solve("weispfennig", condition)
     println(solution._1)
     println(solution._2)

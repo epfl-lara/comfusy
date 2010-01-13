@@ -208,11 +208,19 @@ class CommonTest extends Spec with ShouldMatchers {
     }
     it("should find bases even if one element is null") {
       { val input = List(10, 0, 6)
-        val List(_, List(u1, v1, w1), List(u2, v2, w2)) = bezoutWithBase(0, input)
+        val List(_, List(u1, v1, w1), List(u2, v2, w2)) = bezoutWithBaseMM(0, input)
         10*u1+0*v1+6*w1 should equal (0)
         10*u2+0*v2+6*w2 should equal (0)
         ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true)
         (Math.abs(v1) == 1 || Math.abs(v2) == 1) should be (true)
+      }
+    }
+    it("should find bases when elements are negative") {
+      { val input = List(1, -1, -1)
+        val List(_, List(u1, v1, w1), List(u2, v2, w2)) = bezoutWithBaseMM(0, input)
+        u1-v1-w1 should equal (0)
+        u2-v2-w2 should equal (0)
+        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true)
       }
     }
     it("should find bases when there are four elements") {

@@ -37,8 +37,9 @@ object APASynthesisExamples {
     //OptimizedExample()
     //extract7and8()
     //stepExample()
-    extractRatio()
+    //extractRatio()
     //multiArray()
+    APAExample()
   }
   
   def hourMinutSecondExample() {
@@ -226,6 +227,12 @@ object APASynthesisExamples {
   def extractRatio() {
     val condition = (y*b === c || y*c === b)
     val solution = APASynthesis.solve("extractRatio", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def APAExample() {
+    val condition = (x*(-2)+y*a+1 <= 0 && x*b+y*3 + (-1) >= 0)
+    val solution = APASynthesis.solve("APAExample", condition)
     println(solution._1)
     println(solution._2)
   }

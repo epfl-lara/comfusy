@@ -7,137 +7,260 @@ package synthesis
 // dummy
 object APAAbstractions
 
-object SignAbstraction { // This is an integer abstraction.
+/** This object provides methods for creating sign abstractions
+ *  from integer arithmetic expressions of sign abstractions.
+ * 
+ *  @author  Mikaël Mayer
+ */
+object SignAbstraction {
+  
+  /** Creates a sign abstraction from the sum of two sign abstractions.
+   */
   def addSign(a: SignAbstraction, b: SignAbstraction):ASign = {
-    ASign((a.pos || b.pos), (a.nul && b.nul) || (a.pos && b.neg) || (b.pos && a.neg), (a.neg || b.neg))
+    ASign((a.can_be_positive || b.can_be_positive), (a.can_be_zero && b.can_be_zero) || (a.can_be_positive && b.can_be_negative) || (b.can_be_positive && a.can_be_negative), (a.can_be_negative || b.can_be_negative))
   }
+  
+  /** Creates a sign abstraction from the sum of any number of sign abstractions.
+   */
   def addSign(l: List[SignAbstraction]):ASign = {
     l.foldLeft(ASign(false, true, false))(addSign(_, _))
   }
+  
+  /** Creates a sign abstraction from the product of two sign abstractions.
+   */
   def multSign(a: SignAbstraction, b: SignAbstraction):ASign = {
-    val result = ASign((a.pos && b.pos) || (a.neg && b.neg), (a.nul || b.nul), (a.pos && b.neg) || (a.neg && b.pos))
+    val result = ASign((a.can_be_positive && b.can_be_positive) || (a.can_be_negative && b.can_be_negative), (a.can_be_zero || b.can_be_zero), (a.can_be_positive && b.can_be_negative) || (a.can_be_negative && b.can_be_positive))
     result
   }
+  
+  /** Creates a sign abstraction from the product of any number of sign abstractions.
+   */
   def multSign(l: List[SignAbstraction]):ASign = {
       l.foldLeft(ASign(true, false, false))(multSign(_, _))
   }
+  
+  /** Creates a sign abstraction from the division of sign abstractions.
+   *  Raises an error if the divisor can be zero.
+   */
   def divSign(a: SignAbstraction, b: SignAbstraction):ASign = {
-    if(b.nul)
+    if(b.can_be_zero)
       throw new Exception("Error : "+b+" can be zero")
-    ASign((a.pos && b.pos) || (a.neg && b.neg), (a.pos || a.neg || a.nul) && (b.pos || b.neg || b.nul), (a.pos && b.neg) || (a.neg && b.pos))
+    ASign((a.can_be_positive && b.can_be_positive) || (a.can_be_negative && b.can_be_negative), (a.can_be_positive || a.can_be_negative || a.can_be_zero) && (b.can_be_positive || b.can_be_negative || b.can_be_zero), (a.can_be_positive && b.can_be_negative) || (a.can_be_negative && b.can_be_positive))
   }
+  
+  /** Creates a sign abstraction from the opposite of a sign abstraction.
+   */
   def oppSign(a: SignAbstraction):ASign = {
-    ASign(a.neg, a.nul, a.pos)
+    ASign(a.can_be_negative, a.can_be_zero, a.can_be_positive)
   }
+  
+  /** Creates a sign abstraction from the absolute value of a sign abstraction.
+   */
   def absSign(a: SignAbstraction):ASign = {
-    ASign(a.neg || a.pos, a.nul, false)
+    ASign(a.can_be_negative || a.can_be_positive, a.can_be_zero, false)
   }
+  
+  /** Creates a sign abstraction from a number.
+   */
   def number(i: Int):ASign = {
     ASign(i > 0, i == 0, i < 0)
   }
+  
+  /** Creates a sign abstraction from a linear combination of sign abstractions.
+   *  i + l1*s1 + l2*s2 + l3*s3 ... + ln * sn
+   *  
+   *  @param i The constant coefficient of the linear combination
+   *  @param l The list of pairs (l_i, s_i) where l_i is an integer and s_i a
+   *           sign abstraction.
+   */
   def linearCombinationSign(i: Int, l: List[(Int, SignAbstraction)]):ASign = {
     val l_sign = l map { case (i, sa) => multSign(number(i), sa)}
     addSign(number(i)::l_sign)
   }
   def mergeSign(a: SignAbstraction, b: SignAbstraction):ASign = {
-    ASign(a.pos && b.pos, a.nul && b.nul, a.neg && b.neg)
+    ASign(a.can_be_positive && b.can_be_positive, a.can_be_zero && b.can_be_zero, a.can_be_negative && b.can_be_negative)
   }
 }
 
+/** Class <code>SignAbstraction</code> represents a sign abstraction (>0, =0 and <0)
+ *  Any class that extends it should implement the method <code>normalClone()</code>
+ *  returning a clone from itself.
+ *  The following methods are available:
+ *  - Methods assume* (assumeZero, assumePositive...) to clone the expression with a more specialized abstraction 
+ *  - Methods is* (isPositive, isNegativeZero) which check if the sign abstraction capacities.
+ *  - The method <codep>ropagateSign</code> can be overriden to propagate sign properties to sub-expressions.
+ *
+ *  @author  Mikaël Mayer
+ */
 trait SignAbstraction {
-  // Simple >0, =0 and <0 abstraction
+  
+  //@{ Private section
+  /// Private variables containing the abstraction.
   private var private_pos: Boolean = true
   private var private_nul: Boolean = true
   private var private_neg: Boolean = true
-  def pos:Boolean = private_pos
-  def nul:Boolean = private_nul
-  def neg:Boolean = private_neg
   
-  def normalClone():this.type
-  
+  /// Clones the expression with a new abstraction
   private def cloneWithSign(a: SignAbstraction):this.type = {
-    this.cloneWithSign(a.pos, a.nul, a.neg)
+    this.cloneWithSign(a.can_be_positive, a.can_be_zero, a.can_be_negative)
   }
+  
+  /// Clones the expression with a new abstraction where the signs are given
   private def cloneWithSign(pos_ : Boolean, nul_ : Boolean, neg_ : Boolean):this.type = {
     val result = normalClone().asInstanceOf[SignAbstraction]
     result.setSign(pos_, nul_, neg_)
     result.asInstanceOf[this.type]
   }
+  //@}
 
-  protected def setSign(pos_ :Boolean, nul_ :Boolean, neg_ :Boolean) = {
+  //@{ Protected section
+  /// A direct method to set up the sign.
+  /// Used by subclasses methods only.
+  protected def setSign(pos_ :Boolean, nul_ :Boolean, neg_ :Boolean):Unit = {
     private_pos = pos_
     private_nul = nul_
     private_neg = neg_
   }
-  protected def setSign(i: Int) = {
-    private_pos = i > 0
-    private_nul = i == 0
-    private_neg = i < 0
-  }
-  protected def setSign(i: SignAbstraction) = {
-    private_pos = i.pos
-    private_nul = i.nul
-    private_neg = i.neg
+  /// A direct method to set up the sign according to an integer.
+  /// Used by subclasses methods only.
+  protected def setSign(i: Int):Unit = {
+    setSign(i > 0, i == 0, i < 0) 
   }
   
-  def isPositive() = pos && !neg && !nul
-  def isNegative() = !pos && neg && !nul
-  def isPositiveZero() = (pos || nul) && !neg
-  def isNotPositiveZero() = !pos && !nul
-  def isNegativeZero() = (neg || nul) && !pos
-  def isNotNegativeZero() = !neg && !nul
-  def isNotPositive() = !pos
-  def isNotNegative() = !neg
-  def isZero() = nul && !pos && !neg
-  def isNotZero() = !nul
-  def isNotDefined() = !pos && !neg && !nul
+  /// A direct method to set up the sign according to an existing abstraction.
+  /// Used by subclasses methods only.
+  protected def setSign(i: SignAbstraction):Unit = {
+    setSign(i.can_be_positive, i.can_be_zero, i.can_be_negative)
+  }
   
+  /// Returns a clone of the expression updated with a better or new knowledge about the sign.
+  protected def propagateSign_internal(i: SignAbstraction):this.type = {
+    cloneWithSign(can_be_positive && i.can_be_positive, can_be_zero && i.can_be_zero, can_be_negative && i.can_be_negative)
+  }
+  //@}
+
+  //@{ Sign check methods
+  /// Returns true if the expression can be positive.
+  def can_be_positive:Boolean = private_pos
+  
+  /// Returns true if the expression can be zero.
+  def can_be_zero:Boolean     = private_nul
+  
+  /// Returns true if the expression can be negative.
+  def can_be_negative:Boolean = private_neg
+  
+  /// Returns true if the expression is defined and positive
+  def isPositive() = can_be_positive && !can_be_negative && !can_be_zero
+  
+  /// Returns true if the expression is defined and negative
+  def isNegative() = !can_be_positive && can_be_negative && !can_be_zero
+  
+  /// Returns true if the expression is defined and (positive or zero) 
+  def isPositiveZero() = (can_be_positive || can_be_zero) && !can_be_negative
+    
+  /// Returns true if the expression cannot be positive nor zero
+  def isNotPositiveZero() = !can_be_positive && !can_be_zero
+  
+  /// Returns true if the expression is defined and (negative or zero)
+  def isNegativeZero() = (can_be_negative || can_be_zero) && !can_be_positive
+  
+  /// Returns true if the expression cannot be negative nor zero
+  def isNotNegativeZero() = !can_be_negative && !can_be_zero
+  
+  /// Returns true if the expression cannot be positive
+  def isNotPositive() = !can_be_positive
+  
+  /// Returns true if the expression cannot be negative
+  def isNotNegative() = !can_be_negative
+  
+  /// Returns true if the expression is defined an is zero
+  def isZero() = can_be_zero && !can_be_positive && !can_be_negative
+  
+  /// Returns true if the expression cannot be zero
+  def isNotZero() = !can_be_zero
+  
+  /// Returns true if the expression is not defined.
+  def isNotDefined() = !can_be_positive && !can_be_negative && !can_be_zero
+  //@}
+
+  //@{ Assuming sign methods
+  /// Assumes the sign of a integer
   def assumeSign(i: Int):this.type = {
     propagateSign(ASign(i > 0, i == 0, i < 0))
   }
+  
+  /// Assumes a sign == 0
   def assumeZero():this.type = {
     assumeSign(0)
   }
+  
+  /// Assumes a sign > 0
   def assumePositive():this.type = {
     assumeSign(1)
   }
+  
+  /// Assumes a sign < 0
   def assumeNegative():this.type = {
     assumeSign(-1)
   }
+  
+  /// Assumes a sign >= 0
   def assumePositiveZero():this.type = {
     propagateSign(ASign(true, true, false))
   }
+  
+  /// Assumes a sign <= 0
   def assumeNegativeZero():this.type = {
     propagateSign(ASign(false, true, true))
   }
+  
+  /// Assumes a sign != 0
   def assumeNotZero():this.type = {
     propagateSign(ASign(true, false, true))
   }
+  
+  /// Assumes a sign from a sign abstraction
   def assumeSign(i: SignAbstraction):this.type = {
-    propagateSign(ASign(i.pos, i.nul, i.neg))
+    propagateSign(ASign(i.can_be_positive, i.can_be_zero, i.can_be_negative))
   }
-  def assumeNotzerobility(i: SignAbstraction):this.type = { // Useful in products : if a*b is not null, then a and b are not null.
-    propagateSign(ASign(true, i.nul, true))
+  
+  /// Assumes a potential zero sign from a sign abstraction
+  /// This is used products : a has the same zero-sign as a*b.
+  def assumeNotzerobility(i: SignAbstraction):this.type = {
+    propagateSign(ASign(true, i.can_be_zero, true))
   }
-  protected def propagateSign_internal(i: SignAbstraction):this.type = {
-    cloneWithSign(pos && i.pos, nul && i.nul, neg && i.neg)
-  }
-  def propagateSign(i: SignAbstraction):this.type = { // This method can be overriden
+  //@}
+  
+  //@{ Methods to specialize
+  /// A cloning method to be implemented in order to use this class.
+  def normalClone():this.type
+  
+  /// A method which processes the sign propagation of an expression.
+  /// Can be overriden to propagate the sign within sub-elements of the expression.
+  def propagateSign(i: SignAbstraction):this.type = {
     propagateSign_internal(i)
   }
+  //@}
 }
+
+
+/** The simplest class to implement a sign abstraction.
+ */
 case class ASign(pos_ : Boolean, nul_ : Boolean, neg_ : Boolean) extends SignAbstraction {
   setSign(pos_, nul_, neg_)
   def normalClone():this.type = ASign(pos_, nul_, neg_).asInstanceOf[this.type]
 }
+
+/** The simplest class to implement a positive or zero sign abstraction
+ */
 case class PositiveZeroSign() extends SignAbstraction {
   setSign(true, true, false)
   def normalClone():this.type = PositiveZeroSign().asInstanceOf[this.type]
 }
 
 /*****************************
-  *  Coefficient abstraction  *
-  *****************************/
+ *  Coefficient abstraction  *
+ *****************************/
 
 trait CoefficientAbstraction {
   // Simple >0, =0 and <0 abstraction

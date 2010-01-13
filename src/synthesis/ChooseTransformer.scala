@@ -15,7 +15,7 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
-  private val SHOWDEBUGINFO = false
+  private val SHOWDEBUGINFO = true
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
       println(str.toString)

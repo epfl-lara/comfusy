@@ -21,7 +21,7 @@ object APACondition {
           (useful_input_assignments, useful_input_variables)
         }
       case (assignment@BezoutInputAssignment(xl, tl), (useful_input_assignments, useful_input_variables)) =>
-        if(xl exists (useful_input_variables contains _)) { // Then it's useful
+        if((xl.flatten : List[InputVar]) exists (useful_input_variables contains _)) { // Then it's useful
           (assignment::useful_input_assignments, (tl flatMap (_.input_variables)) ++ useful_input_variables)
         } else { // Then this variable is useless 
           (useful_input_assignments, useful_input_variables)

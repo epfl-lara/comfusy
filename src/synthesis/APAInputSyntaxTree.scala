@@ -500,7 +500,7 @@ case class APAInputLCM(l: List[APAInputTerm]) extends APAInputTerm {
 
 case class APAInputMod(operand: APAInputTerm, divisor: APAInputTerm) extends APAInputTerm {
   setSign(true, true, false) // >= 0
-  if(divisor.nul) throw new Exception("Error : "+divisor+" can be zero in expression "+this)
+  if(divisor.can_be_zero) throw new Exception("Error : "+divisor+" can be zero in expression "+this)
 
   def normalClone():this.type = APAInputMod(operand, divisor).asInstanceOf[this.type]
   def simplified:APAInputTerm = {
