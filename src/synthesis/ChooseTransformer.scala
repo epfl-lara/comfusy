@@ -76,7 +76,7 @@ trait ChooseTransformer
           val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
             case Some(f) => f
             case None => {
-              reporter.error(funBody.pos, "predicate is not in linear arithmetic")
+              reporter.error(funBody.pos, "predicate is not in linear arithmetic\n" + extractedFormula)
               foundErrors = true
               PASynthesis.PAFalse()
             }
