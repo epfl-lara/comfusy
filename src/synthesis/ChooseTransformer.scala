@@ -76,6 +76,17 @@ trait ChooseTransformer
               PASynthesis.PAFalse()
             }
           }
+
+          // ALTERNATIVE LINEARIZATION
+          val apaStyleFormula: APAFormula = formulaToAPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
+            case Some(f) => println("APAStyyyyyyyyyyle: " + f); f
+            case None => {
+              reporter.error(funBody.pos, "predicate is not in parametrized linear arithmetic")
+              foundErrors = true
+              APAFalse()
+            }
+          }
+
           if (foundErrors) {
             return a
           }
@@ -563,12 +574,10 @@ trait ChooseTransformer
           for((nme,coef) <- cstList) {
             if(outVarSet.contains(nme)) {
               outVarsAff = (coef,PASynthesis.OutputVar(nme)) :: outVarsAff
-}
-            else
-{
+            } else {
               inVarsAff = (coef,PASynthesis.InputVar(nme)) :: inVarsAff
+            }
           }
-}
 
           PASynthesis.PACombination(cstTerm, inVarsAff.reverse.removeDuplicates, outVarsAff.reverse.removeDuplicates)
         }
@@ -583,7 +592,41 @@ trait ChooseTransformer
     }
 
     def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
-      None
+      case class EscapeException() extends Exception
+
+      def f2apaf(f: Formula): APAFormula = f match {
+        case And(fs) => APAConjunction(fs.map(f2apaf(_)))
+        case Or(fs) => APADisjunction(fs.map(f2apaf(_)))
+        case True() => APATrue()
+        case False() => APAFalse()
+        case Equals(term, IntLit(0)) => APAEqualZero(makeAPACombination(term))
+        case GreaterEqThan(term, IntLit(0)) => APAGreaterEqZero(makeAPACombination(term))
+        case _ => scala.Predef.error("Unexpected formula in APA format conversion: " + f)
+      }
+
+      def makeAPACombination(term: Term): APACombination = term match {
+        case LinearCombination(cstTerm, cstList) => {
+          var inVarsAff:  List[(Int, InputVar)] = Nil
+          var outVarsAff: List[(APAInputCombination, OutputVar)] = Nil
+
+          for((nme,coef) <- cstList) {
+            if(outVarSet.contains(nme)) {
+              outVarsAff = (APAInputCombination(coef, Nil), OutputVar(nme)) :: outVarsAff
+            } else {
+              inVarsAff = (coef, InputVar(nme)) :: inVarsAff
+            }
+          }
+
+          APACombination(APAInputCombination(cstTerm, inVarsAff.reverse.removeDuplicates), outVarsAff.reverse.removeDuplicates)
+        }
+        case _ => throw EscapeException()
+      }
+
+      try {
+        Some(f2apaf(formula))
+      } catch {
+        case EscapeException() => None
+      }
     }
 
     // tries to extract a formula about (immutable) sets, possibly with

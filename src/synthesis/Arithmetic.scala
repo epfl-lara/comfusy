@@ -334,7 +334,7 @@ object Arithmetic {
           for((varnme, coef) <- cps.map(_.get)) {
             sums(varnme) = sums.getOrElse(varnme,0) + coef
           }
-          val cstcoef = sums.getOrElse("",0)
+          val cstcoef = sums.getOrElse("", 0)
           sums.removeKey("")
           Some(cstcoef,sums.toList)
         }
