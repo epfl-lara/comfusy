@@ -1,14 +1,15 @@
 package synthesis
 
-/**********************
-  *  Sign abstraction  *
-  **********************/
+/*****************************
+ *  Expression abstractions  *
+ *****************************/
 
 // dummy
 object APAAbstractions
 
 /** This object provides methods for creating sign abstractions
  *  from integer arithmetic expressions of sign abstractions.
+ *  Sign abstraction are typically applied to input terms.
  * 
  *  @author  Mikaël Mayer
  */
@@ -260,6 +261,7 @@ case class PositiveZeroSign() extends SignAbstraction {
 
 /** Class <code>CoefficientAbstraction</code> represents an all-zero coefficients abstraction.
  *  The coefficients of a linear combination c_0 + c_1*y_1 + ... c_n*y_n are (c_1, ..., c_n)
+ *  where the c_i are input terms and the y_i are output variables.
  *  Any class that extends <code>CoefficientAbstraction</code> should implement the method <code>normalClone()</code>
  *  returning a clone from itself.
  *  The following methods are available:
