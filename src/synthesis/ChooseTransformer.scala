@@ -20,6 +20,11 @@ trait ChooseTransformer
     if(SHOWDEBUGINFO)
       println(str.toString)
   }
+  private val SHOWAPADEBUGINFO = true
+  private def ddprintln(str: Any): Unit = {
+    if(SHOWAPADEBUGINFO)
+      println(str.toString)
+  }
 
   private lazy val synthesisPackage: Symbol = definitions.getModule("synthesis")
   private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
@@ -79,7 +84,7 @@ trait ChooseTransformer
 
           // ALTERNATIVE LINEARIZATION
           val apaStyleFormula: APAFormula = formulaToAPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
-            case Some(f) => println("APAStyyyyyyyyyyle: " + f); f
+            case Some(f) => f
             case None => {
               reporter.error(funBody.pos, "predicate is not in parametrized linear arithmetic")
               foundErrors = true
@@ -111,8 +116,14 @@ trait ChooseTransformer
             }
           }
 
-          dprintln("Mikael-Style formula : " + paStyleFormula)
+
+          val (apaPrec, apaProg) = APASynthesis.solve(apaStyleFormula)
+          ddprintln("APA-Style formula : " + apaStyleFormula)
+          ddprintln("APA precond       : " + apaPrec)
+          ddprintln("APA program       : " + apaProg)
+
           val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
+          dprintln("Mikael-Style formula : " + paStyleFormula)
           dprintln("Precondition         : " + paPrec)
           dprintln("Program              : " + paProg)
 
