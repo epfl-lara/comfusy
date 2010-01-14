@@ -317,7 +317,9 @@ object Arithmetic {
         case Variable(nme) => Some((nme,1))
         case Neg(Variable(nme)) => Some((nme,-1))
         case Times(IntLit(c) :: Variable(nme) :: Nil) => Some((nme,c))
+        case Times(IntLit(c) :: Neg(Variable(nme)) :: Nil) => Some((nme,-c))
         case Times(Variable(nme) :: IntLit(c) :: Nil) => Some((nme,c))
+        case Times(Neg(Variable(nme)) :: IntLit(c) :: Nil) => Some((nme,-c))
         case _ => None
       }
     }
