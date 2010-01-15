@@ -23,7 +23,8 @@ object PASynthesisExamples {
     //balancedProblem()
     //dividesExample()
     //HourMinutSecondUnique()
-    problemExample()
+    //problemExample()
+    paboucle()
     //ifExample()
     //inverseFunction()
     //weispfennig()
@@ -106,6 +107,13 @@ object PASynthesisExamples {
     val y = O("y")
     val condition = y*2 >= 0 && y*2 <= 5 && PADivides(5, x-y)   
     val solution = PASynthesis.solve("weispfennig", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def paboucle() {
+    val a = I("a")
+    val condition = c - y <= a - x*6 && a - x*6 <= b + x + y*7  &&  x > y 
+    val solution = PASynthesis.solve("paboucle", condition)
     println(solution._1)
     println(solution._2)
   }

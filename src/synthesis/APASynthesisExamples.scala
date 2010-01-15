@@ -39,7 +39,8 @@ object APASynthesisExamples {
     //stepExample()
     //extractRatio()
     //multiArray()
-    APAExample()
+    //APAExample()
+    paboucle()
   }
   
   def hourMinutSecondExample() {
@@ -245,6 +246,13 @@ object APASynthesisExamples {
     val j = O("j")
     val condition = ((c + (i + j*640)*3 === x + y*1024) && c >= 0 && c < 3 && i >= 0 && i < 640 && j >= 0 && j < 480 && x >= 0 && x < 1024) 
     val solution = APASynthesis.solve("multiArray", condition)
+    println(solution._1)
+    println(solution._2)
+  }
+  def paboucle() {
+    val a = I("a")
+    val condition = c - y <= a - x*6 && a - x*6 <= b + x + y*7  &&  x > y + z && z*9 <= x+y && z*5 > b + x + 8
+    val solution = APASynthesis.solve("paboucle", condition)
     println(solution._1)
     println(solution._2)
   }
