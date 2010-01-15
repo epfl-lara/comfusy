@@ -231,5 +231,19 @@ class CommonTest extends Spec with ShouldMatchers {
         ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true) 
       }*/
     }
+    it("should flatten variables correctly") {
+      val mi = new MatrixIterator((1::2::Nil)::(3::4::Nil)::Nil)
+      mi.next should equal (1)
+      mi.next should equal (2)
+      mi.next should equal (3)
+      mi.next should equal (4)
+      try {
+        val m = mi.next
+        throw new Error("There should have been an exception")
+      } catch {
+        case e =>
+      }
+      
+    }
   }
 }

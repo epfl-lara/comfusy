@@ -310,6 +310,14 @@ object Common {
     result.reverse
   }
   
+  class MatrixIterator(val m: List[List[Int]]) {
+    private var l:List[Int] = m.flatten 
+    def next: Int = {
+      val result = l.head
+      l = l.tail
+      result
+    }
+  }
   
   def smod(x:Int, m_signed:Int) = {
     val m = Math.abs(m_signed)
