@@ -19,6 +19,8 @@ trait CodeGeneration {
   private lazy val scalaCollectionImmutable: Symbol = definitions.getModule("scala.collection.immutable")
   private lazy val scalaCollectionImmutableSetModule: Symbol = definitions.getModule("scala.collection.immutable.Set")
   private lazy val setEmpty: Symbol = definitions.getMember(scalaCollectionImmutableSetModule, "empty")
+  private val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
+
   
   class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap, val emitWarnings: Boolean, val pos: Position) {
     import scala.tools.nsc.util.NoPosition
@@ -36,10 +38,11 @@ trait CodeGeneration {
     def programToCode(prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree = 
       programToCode(initialMap, prec, prog, withPrec)
 
+    def apaProgramToCode(prec: APACondition, prog: APAProgram, withPrec: Boolean): Tree =
+      apaProgramToCode(initialMap, prec, prog, withPrec)
+
     def programToCode(initMap: SymbolMap, prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree = {
       var map: SymbolMap = initMap
-
-      val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
 
       if(prec.global_condition == PAFalse()) {
         if(emitWarnings)
@@ -109,6 +112,17 @@ trait CodeGeneration {
           List(prog.output_variables.map(ov => variable(map, ov.name)))
         )
       })
+    }
+
+    def apaProgramToCode(initMap: SymbolMap, prec: APACondition, prog: APAProgram, withPrec: Boolean): Tree = {
+      if(prog.output_variables.size == 1) {
+        throwTree
+      } else {
+        New(
+          TypeTree(definitions.tupleType(prog.output_variables.map(x => definitions.IntClass.tpe))),
+          List(prog.output_variables.map(ov => throwTree))
+        )
+      }
     }
   
     def termToCode(map: SymbolMap, term: PATerm): Tree = term match {

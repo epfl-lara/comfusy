@@ -73,14 +73,14 @@ trait ChooseTransformer
           dprintln("Symbols in there     : " + extractedSymbols)
 
           // LINEARIZATION
-          val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
-            case Some(f) => f
-            case None => {
-              reporter.error(funBody.pos, "predicate is not in linear arithmetic\n" + extractedFormula)
-              foundErrors = true
-              PASynthesis.PAFalse()
-            }
-          }
+          // val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
+          //   case Some(f) => f
+          //   case None => {
+          //     reporter.error(funBody.pos, "predicate is not in linear arithmetic\n" + extractedFormula)
+          //     foundErrors = true
+          //     PASynthesis.PAFalse()
+          //   }
+          // }
 
           // ALTERNATIVE LINEARIZATION
           val apaStyleFormula: APAFormula = formulaToAPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
@@ -122,12 +122,13 @@ trait ChooseTransformer
           ddprintln("APA precond       : " + apaPrec)
           ddprintln("APA program       : " + apaProg)
 
-          val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
-          dprintln("Mikael-Style formula : " + paStyleFormula)
-          dprintln("Precondition         : " + paPrec)
-          dprintln("Program              : " + paProg)
+          //val (paPrec,paProg) = PASynthesis.solve(outputVariableList.map(PASynthesis.OutputVar(_)), paStyleFormula)
+          //dprintln("Mikael-Style formula : " + paStyleFormula)
+          //dprintln("Precondition         : " + paPrec)
+          //dprintln("Program              : " + paProg)
 
           // We try to falsify the pre-condition.
+          /*
           if(emitWarnings && paPrec != PASynthesis.PATrue()) {
             // have to do this cause formula could be false in a semi-obvious way.
             val myStyle = conditionToFormula(paPrec) 
@@ -143,6 +144,7 @@ trait ChooseTransformer
               }
             }
           }
+          */
           
           // CODE GENERATION
           var initialMap: SymbolMap = Map.empty
@@ -151,9 +153,11 @@ trait ChooseTransformer
           })
           val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
           typer.typed(atOwner(currentOwner) {
-            codeGen.programToCode(paPrec, paProg, true) 
+            // codeGen.programToCode(paPrec, paProg, true) 
+            codeGen.apaProgramToCode(apaPrec, apaProg, true) 
           })
         }
+        // END OF CODE GENERATION FOR CHOOSE STATS FOR PARAM. LINEAR ARITH.
 
         case m @ Match(selector, cases)
           if isSubType(selector.tpe, definitions.IntClass.tpe)
