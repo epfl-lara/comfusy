@@ -310,6 +310,50 @@ object Arithmetic {
     nnf(formula, false)
   }
 
+  // checks that there is never a multiplicative term with a restricted var on
+  // both sides
+  def isQuasiLinear(form: Formula, restricted: Set[VariableID]) : Boolean = {
+    def iql(f: Formula) : Boolean = f match {
+      case And(fs) => fs.forall(iql(_))
+      case Or(fs) => fs.forall(iql(_))
+      case Not(fm) => iql(fm)
+      case True() | False() => true
+      case Equals(l,r) => iqlt(l) && iqlt(r)
+      case NotEquals(l,r) => iqlt(l) && iqlt(r)
+      case LessThan(l,r) => iqlt(l) && iqlt(r)
+      case LessEqThan(l,r) => iqlt(l) && iqlt(r)
+      case GreaterThan(l,r) => iqlt(l) && iqlt(r)
+      case GreaterEqThan(l,r) => iqlt(l) && iqlt(r)
+    }
+
+    def iqlt(t: Term) : Boolean = t match {
+      case Variable(id) => true
+      case IntLit(v) => true
+      case Neg(t) => true
+      case Plus(ts) => ts.forall(iqlt(_))
+      case Minus(l,r) => iqlt(l) && iqlt(r)
+      case Times(ts) => {
+        val varSets: List[Set[VariableID]] = ts.map(variablesOf(_)).map(_ ** restricted)
+        
+        var ok = true
+        for(val vs1 <- varSets) {
+          for(val vs2 <- varSets) {
+            if(!(vs1 eq vs2) && !(vs1 ** vs2).isEmpty) {
+              ok = false
+              println("CE: " + vs1 + " ... " + vs2)
+            }
+          }
+        }
+        ok
+      }
+      case Div(l,r) => false // not entirely accurate, but goes well with what we extract :)
+      case Modulo(l,r) => false // same as above
+      case Min(ts) => ts.forall(iqlt(_))
+    }
+
+    iql(form)
+  }
+
   object LinearCombination {
     private object CoefProduct {
       def unapply(term: Term) : Option[(String,Int)] = term match {
@@ -344,7 +388,7 @@ object Arithmetic {
       case _ => None
     }
   }
-  
+
   /** The rest is only for pretty-printing... */
   private val ANDSTR = " \u2227 "
   private val ORSTR  = " \u2228 "

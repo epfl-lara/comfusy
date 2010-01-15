@@ -92,6 +92,8 @@ trait ChooseTransformer
             }
           }
 
+          println("IQL : " + isQuasiLinear(extractedFormula, Set.empty[String] ++ outputVariableList))
+
           if (foundErrors) {
             return a
           }
@@ -605,6 +607,13 @@ trait ChooseTransformer
       } catch {
         case EscapeException() => None
       }
+    }
+
+    def formulaToAPAFormula2(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = 
+    if(!isQuasiLinear(formula, outVarSet)) {
+      None
+    } else {
+      None // FIXME
     }
 
     def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
