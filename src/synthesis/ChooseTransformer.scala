@@ -152,9 +152,10 @@ trait ChooseTransformer
             initialMap = initialMap + (sym.name.toString -> sym)
           })
           val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
+          val generated = codeGen.apaProgramToCode(apaPrec, apaProg, true) 
+
           typer.typed(atOwner(currentOwner) {
-            // codeGen.programToCode(paPrec, paProg, true) 
-            codeGen.apaProgramToCode(apaPrec, apaProg, true) 
+            generated
           })
         }
         // END OF CODE GENERATION FOR CHOOSE STATS FOR PARAM. LINEAR ARITH.

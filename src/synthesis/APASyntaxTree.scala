@@ -1,5 +1,8 @@
 package synthesis
 
+// dummy
+object APASyntaxTree
+
 /// ************* Abstract syntax tree ***************///
 trait APAVariable
 
