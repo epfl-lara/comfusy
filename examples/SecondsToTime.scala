@@ -7,6 +7,7 @@ object SecondsToTime {
 
     val (hours, minutes, seconds) = choose((h: Int, m: Int, s: Int) => (
            h * 3600 + m * 60 + s == secnum
+        && h > 0
         && 0 <= m
         && m < 60
         && 0 <= s

@@ -200,12 +200,12 @@ trait CodeGeneration {
           Nil
         } // : List[(APACondition, APAProgram)] 
         case a @ APAForSplit(vs, lb, ub, cond, prog) => {
-          println("AAA : " + a)
-          println("VS : " + vs)
-          println("LB : " + lb)
-          println("UB : " + ub)
-          println("CD : " + cond)
-          println("PR : " + prog)
+          //println("AAA : " + a)
+          //println("VS : " + vs)
+          //println("LB : " + lb)
+          //println("UB : " + ub)
+          //println("CD : " + cond)
+          //println("PR : " + prog)
 
           val valNames = prog.output_variables.map(ov => ov.name)
           val valCount = valNames.size

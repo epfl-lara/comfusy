@@ -20,7 +20,7 @@ trait ChooseTransformer
     if(SHOWDEBUGINFO)
       println(str.toString)
   }
-  private val SHOWAPADEBUGINFO = true
+  private val SHOWAPADEBUGINFO = false
   private def ddprintln(str: Any): Unit = {
     if(SHOWAPADEBUGINFO)
       println(str.toString)
@@ -72,18 +72,8 @@ trait ChooseTransformer
           dprintln("Corresponding formula: " + extractedFormula)
           dprintln("Symbols in there     : " + extractedSymbols)
 
-          // LINEARIZATION
-          // val paStyleFormula: PASynthesis.PAFormula = formulaToPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
-          //   case Some(f) => f
-          //   case None => {
-          //     reporter.error(funBody.pos, "predicate is not in linear arithmetic\n" + extractedFormula)
-          //     foundErrors = true
-          //     PASynthesis.PAFalse()
-          //   }
-          // }
-
           // ALTERNATIVE LINEARIZATION
-          val apaStyleFormula: APAFormula = formulaToAPAFormula(extractedFormula, Set.empty[String] ++ outputVariableList) match {
+          val apaStyleFormula: APAFormula = formulaToAPAFormula2(extractedFormula, Set.empty[String] ++ outputVariableList) match {
             case Some(f) => f
             case None => {
               reporter.error(funBody.pos, "predicate is not in parametrized linear arithmetic")
@@ -92,7 +82,7 @@ trait ChooseTransformer
             }
           }
 
-          println("IQL : " + isQuasiLinear(extractedFormula, Set.empty[String] ++ outputVariableList))
+          ddprintln("IQL : " + isQuasiLinear(extractedFormula, Set.empty[String] ++ outputVariableList))
 
           if (foundErrors) {
             return a
@@ -130,23 +120,23 @@ trait ChooseTransformer
           //dprintln("Program              : " + paProg)
 
           // We try to falsify the pre-condition.
-          /*
-          if(emitWarnings && paPrec != PASynthesis.PATrue()) {
-            // have to do this cause formula could be false in a semi-obvious way.
-            val myStyle = conditionToFormula(paPrec) 
-            if(myStyle != False()) {
-              dprintln("My-style: " + myStyle)
-              isSat(Not(myStyle)) match {
-                case (Some(true), Some(ass)) => {
-                  reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
+          if(emitWarnings && !(apaPrec.global_condition == APATrue() && apaPrec.pf == APAEmptySplitCondition())) {
+            apaConditionToFormula(apaPrec) match {
+              case None => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure could not handle the non-linear precondition).", true)
+              case Some(myStyle) if(myStyle != False()) => {
+                dprintln("My-style: " + myStyle)
+                isSat(Not(myStyle)) match {
+                  case (Some(true), Some(ass)) => {
+                    reporter.info(a.pos, "Synthesis predicate is not satisfiable for variable assignment: " + ass.map(p => p._1 + " = " + p._2).mkString(", "), true)
 
+                  }
+                  case (Some(false), _) => ;
+                  case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
                 }
-                case (Some(false), _) => ;
-                case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
               }
+              case Some(_) => ; // we would already have a warning.
             }
           }
-          */
           
           // CODE GENERATION
           var initialMap: SymbolMap = Map.empty
@@ -613,8 +603,97 @@ trait ChooseTransformer
     if(!isQuasiLinear(formula, outVarSet)) {
       None
     } else {
-      None // FIXME
-    }
+      case class EscapeException() extends Exception
+
+      def f2apaf(form: Formula): APAFormula = ((form match {
+        case And(fs) => APAConjunction(fs.map(f2apaf(_)))
+        case Or(fs) => APADisjunction(fs.map(f2apaf(_)))
+        case Not(f) => APANegation(f2apaf(f))
+        case True() => APATrue()
+        case False() => APAFalse()
+        case Equals(l,r) => t2apat(l).===(t2apat(r))
+        case NotEquals(l,r) => APANegation(t2apat(l).===(t2apat(r)))
+        case LessThan(l,r) => t2apat(l).<(t2apat(r))
+        case LessEqThan(l,r) => t2apat(l).<=(t2apat(r))
+        case GreaterThan(l,r) => t2apat(l).>(t2apat(r))
+        case GreaterEqThan(l,r) => t2apat(l).>=(t2apat(r))
+      }):APAFormula).simplified
+
+      def t2apat(term: Term): APACombination = ((term match {
+        case Variable(id) if outVarSet.contains(id) => OutputVar(id).toCombination
+        case Variable(id) => APACombination(InputVar(id).toInputTerm, Nil)
+        case IntLit(value) => APACombination(value)
+        case Neg(t) => t2apat(t).*(-1)
+        case Plus(ts) => ts.map(t2apat(_)).reduceLeft(_.+(_))
+        case Minus(t1, t2) => t2apat(t1).-(t2apat(t2))
+        case times @ Times(ts) => {
+          tryInTerm(times) match {
+            case Some(apaic) => APACombination(apaic)
+            case None => {
+              val mapped = ts.map(tryInTerm(_))
+              mapped.count(_.isEmpty) match {
+                case 0 => scala.Predef.error("Something went wrong.")
+                case 1 => {
+                  val inTerm: APAInputTerm = mapped.filter(_.isDefined).map(_.get).reduceLeft[APAInputTerm]((x:APAInputTerm,y:APAInputTerm) => APAInputMultiplication(x :: y :: Nil).simplified)
+                  // .get should never fail !
+                  val outTerm: APACombination = t2apat(ts.find(tryInTerm(_).isEmpty).get)
+                  outTerm.*(inTerm)
+                }
+                case _ => throw EscapeException()
+              }
+            }
+          }
+        }
+        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
+        case Min(ts) => scala.Predef.error("Mod should not occur.")
+      }):APACombination).simplified
+
+      def tryInTerm(term: Term): Option[APAInputTerm] = (term match {
+        case Variable(id) if outVarSet.contains(id) => None
+        case Variable(id) => Some(InputVar(id).toInputTerm)
+        case IntLit(value) => Some(APAInputCombination(value))
+        case Neg(t) => tryInTerm(t).map(_.*(APAInputCombination(-1)))
+        case Plus(ts) => {
+          val mapped = ts.map(tryInTerm(_))
+          mapped.find(_.isEmpty) match {
+            case Some(_) => None
+            case None => {
+              val mappedOK: List[APAInputTerm] = mapped.map(_.get)
+              Some(mappedOK.reduceLeft(_.+(_)))
+            }
+          }
+        }
+        case Minus(t1, t2) => {
+          val tt1 = tryInTerm(t1)
+          val tt2 = tryInTerm(t2)
+          if(tt1.isEmpty || tt2.isEmpty) {
+            None
+          } else {
+            Some(tt1.get.-(tt2.get))
+          }
+        }
+        case Times(ts) => {
+          val mapped = ts.map(tryInTerm(_))
+          mapped.find(_.isEmpty) match {
+            case Some(_) => None
+            case None => {
+              val mappedOK: List[APAInputTerm] = mapped.map(_.get)
+              Some(mappedOK.reduceLeft[APAInputTerm]((x:APAInputTerm,y:APAInputTerm) => APAInputMultiplication(x :: y :: Nil).simplified))
+            }
+          }
+        }
+        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
+        case Min(ts) => scala.Predef.error("Mod should not occur.")
+      }).map(_.simplified)
+      
+      try {
+        Some(f2apaf(formula))
+      } catch {
+        case EscapeException() => scala.Predef.error("was quasi-linear or not??"); None
+      }
+    } 
 
     def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
       case class EscapeException() extends Exception
@@ -779,4 +858,63 @@ trait ChooseTransformer
     out
   }
 
+  // does its "best" to convert to some formula we can send to Z3, but may fail
+  def apaConditionToFormula(cond: APACondition): Option[Formula] = {
+    case class EscapeException() extends Exception
+
+    def f2f(f: APAFormula): Formula = f match {
+      case APAConjunction(fs) => And(fs.map(f2f(_)))
+      case APADisjunction(fs) => Or(fs.map(f2f(_)))
+      case APANegation(fm) => Not(f2f(fm))
+      case APADivides(coef, comb) => Equals(IntLit(0), Modulo(t2t(comb), it2t(coef)))
+      case APAEqualZero(comb) => Equals(IntLit(0), t2t(comb))
+      case APAGreaterZero(comb) => LessThan(IntLit(0), t2t(comb))
+      case APAGreaterEqZero(comb) => LessEqThan(IntLit(0), t2t(comb))
+      case APATrue() => True()
+      case APAFalse() => False()
+    }
+
+    def t2t(t: APATerm): Term = t match {
+      case APACombination(cstPart, ol) => {
+        Plus(it2t(cstPart) ::
+          ol.map(op => Times(it2t(op._1) :: Variable(op._2.name) :: Nil)))
+      }
+      case APADivision(pac, coef) => {
+        Div(t2t(pac), it2t(coef))
+      }
+      case APAMinimum(ts) => Min(ts.map(t2t(_)))
+      case APAMaximum(ts) => Neg(Min(ts.map(tr => Neg(t2t(tr)))))
+    }
+
+    def it2t(it: APAInputTerm): Term = it match {
+      case APAInputCombination(coef, il) => {
+        Plus(IntLit(coef) ::
+          il.map(ip => Times(IntLit(ip._1) :: Variable(ip._2.name) :: Nil)))
+      }
+      case APAInputDivision(nums, dens) => {
+        Div(Times(nums.map(it2t(_))), Times(dens.map(it2t(_))))
+      }
+      case APAInputMultiplication(ops) => Times(ops.map(it2t(_)))
+      case APAInputAddition(ops) => Plus(ops.map(it2t(_)))
+      case APAInputAbs(arg) => val t = it2t(arg); Neg(Min(t :: Neg(t) :: Nil))
+      case APAInputGCD(_) => throw EscapeException()
+      case APAInputLCM(_) => throw EscapeException()
+    }
+
+    def iass2f(ia: InputAssignment): Formula = ia match {
+      case SingleInputAssignment(v, t) => Equals(Variable(v.name), it2t(t))
+      case _ => throw EscapeException()
+    }
+
+    try {
+      if(cond.pf != APAEmptySplitCondition()) throw EscapeException()
+
+      val inAss = cond.input_assignment.map(iass2f(_))
+      val out = normalized(Or(Not(And(inAss)) :: f2f(cond.global_condition) :: Nil))
+      //println(out)
+      Some(out)
+    } catch {
+      case EscapeException() => None
+    }
+  }
 }
