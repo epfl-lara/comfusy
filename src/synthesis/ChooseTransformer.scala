@@ -15,12 +15,12 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
-  private val SHOWDEBUGINFO = false
+  private val SHOWDEBUGINFO = true
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
       println(str.toString)
   }
-  private val SHOWAPADEBUGINFO = false
+  private val SHOWAPADEBUGINFO = true
   private def ddprintln(str: Any): Unit = {
     if(SHOWAPADEBUGINFO)
       println(str.toString)
@@ -108,8 +108,12 @@ trait ChooseTransformer
             }
           }
 
+          // Mikael's AST for examples/CoordinatesSimpler.scala
+          val mikaelsAST = APAConjunction(List(APAConjunction(List(APAConjunction(List(APAConjunction(List(APAEqualZero(APACombination(APAInputCombination(0,List((1,InputVar("i")))),List((APAInputCombination(-1,List()),OutputVar("j")), (APAInputCombination(0,List((-1,InputVar("x")))),OutputVar("k"))))), APAGreaterEqZero(APACombination(APAInputCombination(0,List()),List((APAInputCombination(1,List()),OutputVar("j"))))))), APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("x")))),List((APAInputCombination(-1,List()),OutputVar("j"))))))), APAGreaterEqZero(APACombination(APAInputCombination(0,List()),List((APAInputCombination(1,List()),OutputVar("k"))))))), APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("y")))),List((APAInputCombination(-1,List()),OutputVar("k")))))))
 
+          //val (apaPrec, apaProg) = APASynthesis.solve(mikaelsAST) //apaStyleFormula)
           val (apaPrec, apaProg) = APASynthesis.solve(apaStyleFormula)
+          //ddprintln("APA-Style formula : " + mikaelsAST) // apaStyleFormula)
           ddprintln("APA-Style formula : " + apaStyleFormula)
           ddprintln("APA precond       : " + apaPrec)
           ddprintln("APA program       : " + apaProg)
