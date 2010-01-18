@@ -9,7 +9,7 @@ object APAAbstractProgram {
     imap.toList map {case (v, i) => (v, APACombination(APAInputCombination(i, Nil), Nil))}
     //Combines the two sentences, adding a "\n" if needed
   def combineSentences(s1: String, s2: String):String = (if(s1.endsWith("\n") || s1 == "") s1 else s1 + "\n") + s2
-  
+
   def propagation_delete_temp(
       input_assignments : List[InputAssignment],
       output_assignments : List[(OutputVar, APATerm)],

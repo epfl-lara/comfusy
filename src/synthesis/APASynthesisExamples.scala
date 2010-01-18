@@ -14,7 +14,7 @@ object APASynthesisExamples {
   val y = O("y")
   val y1 = O("y1")
   val z = O("z")
-  
+
   val a = I("a")
   val b = I("b")
   val c = I("c")
@@ -32,7 +32,7 @@ object APASynthesisExamples {
     balancedProblem()
     dividesExample()
     rhymesExample()*/
-    //quotientExample()
+    quotientExample()
     //multiplicativeInverseExample()
     //OptimizedExample()
     //extract7and8()
@@ -40,7 +40,7 @@ object APASynthesisExamples {
     //extractRatio()
     //multiArray()
     //APAExample()
-    paboucle()
+    //paboucle()
   }
   
   def hourMinutSecondExample() {
@@ -152,11 +152,27 @@ object APASynthesisExamples {
     println(solution._1)
     println(solution._2)
   }
-  
+
   def quotientExample() {
-    val b2 = b.assumeSign(1).toInputTerm
-    val condition = (a === (z*b2)*b2 + x*b2 + y && y >= 0 && y < b2 && x >= 0 && x < b2)
+    //val b2 = b.assumeSign(1).toInputTerm
+    //val condition = (a === (z*b2)*b2 + x*b2 + y && y >= 0 && y < b2 && x >= 0 && x < b2)
     //val condition = (a === x*b2 + y && y >= 0 && y < b2)
+    val j = O("j")
+    val k = O("k")
+    val i = I("i")
+    val x = I("x")
+    val y = I("y")
+    /*val condition = (i === k * x + j
+    && j >= 0 && j < x
+    && k >= 0&& k < y)*/
+    val condition = APAConjunction(List(APAEqualZero(APACombination(APAInputCombination(0,
+        List((1,InputVar("i")))),List((APAInputCombination(-1,List()),OutputVar("j")),
+                                      (APAInputCombination(0,List((-1,InputVar("x")))),OutputVar("k"))))),
+                                        APAGreaterEqZero(APACombination(APAInputCombination(0,List()),
+        List((APAInputCombination(1,List()),OutputVar("j"))))),
+        APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("x")))),List((APAInputCombination(-1,List()),OutputVar("j"))))), APAGreaterEqZero(APACombination(APAInputCombination(0,List()),List((APAInputCombination(1,List()),OutputVar("k"))))), APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("y")))),List((APAInputCombination(-1,List()),OutputVar("k")))))))
+    
+    println(condition)
     val solution = APASynthesis.solve("quotient", condition)
     println(solution._1)
     println(solution._2)

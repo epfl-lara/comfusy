@@ -21,7 +21,7 @@ class APASyntaxTreeTest extends Spec with ShouldMatchers {
   val x0 = I("x0")
   val c = I("c")
   val d = I("d")
-  
+
   it("should get the right equations from a general formula") {
     val pac = (x >= 0) && ((x >= 1) || ((y+z) <= 0)) && ((x < 1) || ((y-z) <= 0))
     pac.getEquations.toList should equal (

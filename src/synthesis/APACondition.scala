@@ -10,7 +10,7 @@ sealed abstract class APAAbstractCondition {
   /// Returns a string representing the condition in current rendering mode.
   /// See APASynthesis.rendering_mode to change it.
   def toCommonString : String
-  
+
   /// Returns the boolean value of this condition under a certain variable mapping.
   def execute(l: Map[InputVar, Int]): Boolean
   

@@ -5,7 +5,7 @@ import org.scalatest.matchers._
 
 class CommonTest extends Spec with ShouldMatchers {
   import Common._
-  
+
   describe("Common functions") {
     it("should compute the GCD of a list") {
       gcdlist((-18)::12::0::36::Nil) should equal (6)

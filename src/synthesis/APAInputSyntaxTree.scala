@@ -42,7 +42,7 @@ sealed abstract class APAInputTerm extends SignAbstraction {
 
   /// Returns the same expression, but simplified. 
   def simplified:APAInputTerm // OptimizeMe : Store when it's already simplified in order not to compute two times the same thing
-  
+
   /// @return The list of Input variables that this expression contains.
   def input_variables: List[InputVar]
   

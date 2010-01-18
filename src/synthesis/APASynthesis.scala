@@ -17,6 +17,7 @@ sealed abstract class RenderingMode {
   val lcm_symbol: String
   def mod_function(operand: String, divisor: String): String
 }
+
 case class RenderingScala() extends RenderingMode {
   val (true_symbol, false_symbol, and_symbol, or_symbol, not_symbol, min_symbol, max_symbol, error_string) =
     ("true", "false", "&&", "||", "!", "Math.min", "Math.max", "throw new Error(\"No solution exists\")")
@@ -29,6 +30,7 @@ case class RenderingScala() extends RenderingMode {
     
   }
 }
+
 case class RenderingPython() extends RenderingMode {
   val (true_symbol, false_symbol, and_symbol, or_symbol, not_symbol, min_symbol, max_symbol, error_string) =
     ("True", "False", "and", "or", "not", "min", "max", "raise Exception(\"No solution exists\")")

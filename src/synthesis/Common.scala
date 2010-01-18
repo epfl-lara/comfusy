@@ -7,7 +7,7 @@ object Common {
   case class MMBezout() extends BezoutType // Made manually.
   
   var computing_mode:BezoutType = MMBezout()
-  
+
   def bezout(e: Int, a : List[Int]):List[Int] = {
     computing_mode match {
       case OTBezout() => bezoutOT(e, a)

@@ -16,7 +16,7 @@ class APAAbstractionTest extends Spec with ShouldMatchers {
   val y = O("y")
   val y1 = O("y1")
   val z = O("z")
-  
+
   val b = I("b")
   val x0 = I("x0")
   val c = I("c")

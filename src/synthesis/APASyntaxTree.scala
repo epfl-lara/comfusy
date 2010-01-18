@@ -51,6 +51,7 @@ abstract sealed class APAExpression {
     case APAMaximum(l) => (l flatMap (_.input_variables)).removeDuplicates
     case APANegation(e)=> e.input_variables
   }
+
   def has_output_variables: Boolean = (output_variables != Nil) //OptimizeMe!
   /// Simplified version of this expression
   def simplified: APAExpression

@@ -14,7 +14,7 @@ object APAAbstractions
  *  @author  Mikaël Mayer
  */
 object SignAbstraction {
-  
+
   /** Creates a sign abstraction from the sum of two sign abstractions.
    */
   def addSign(a: SignAbstraction, b: SignAbstraction):ASign = {

@@ -20,7 +20,7 @@ object InputAssignment {
  *  like in "val a = b/2+c", where a, b and c are input variables.
  */
 sealed abstract class InputAssignment {
-  
+
   /// Returns a list of input variables contained in the expression of this input assignment
   def input_variables: List[InputVar]
   
