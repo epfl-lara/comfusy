@@ -15,12 +15,12 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
-  private val SHOWDEBUGINFO = true
+  private val SHOWDEBUGINFO = false
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
       println(str.toString)
   }
-  private val SHOWAPADEBUGINFO = true
+  private val SHOWAPADEBUGINFO = false
   private def ddprintln(str: Any): Unit = {
     if(SHOWAPADEBUGINFO)
       println(str.toString)
@@ -624,8 +624,8 @@ trait ChooseTransformer
       }):APAFormula).simplified
 
       def t2apat(term: Term): APACombination = ((term match {
-        case Variable(id) if outVarSet.contains(id) => OutputVar(id).toCombination
-        case Variable(id) => APACombination(InputVar(id).toInputTerm, Nil)
+        case Variable(id) if outVarSet.contains(id) => APASynthesisExamples.O(id).toCombination
+        case Variable(id) => APACombination(APASynthesisExamples.I(id).toInputTerm, Nil)
         case IntLit(value) => APACombination(value)
         case Neg(t) => t2apat(t).*(-1)
         case Plus(ts) => ts.map(t2apat(_)).reduceLeft(_.+(_))
@@ -655,7 +655,7 @@ trait ChooseTransformer
 
       def tryInTerm(term: Term): Option[APAInputTerm] = (term match {
         case Variable(id) if outVarSet.contains(id) => None
-        case Variable(id) => Some(InputVar(id).toInputTerm)
+        case Variable(id) => Some(APASynthesisExamples.I(id).toInputTerm)
         case IntLit(value) => Some(APAInputCombination(value))
         case Neg(t) => tryInTerm(t).map(_.*(APAInputCombination(-1)))
         case Plus(ts) => {
@@ -699,7 +699,7 @@ trait ChooseTransformer
       }
     } 
 
-    def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
+/*    def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
       case class EscapeException() extends Exception
 
       def f2apaf(f: Formula): APAFormula = f match {
@@ -736,6 +736,7 @@ trait ChooseTransformer
         case EscapeException() => None
       }
     }
+*/
 
     // tries to extract a formula about (immutable) sets, possibly with
     // arithmetic stuff in it as well

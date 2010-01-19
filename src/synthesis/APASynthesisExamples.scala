@@ -265,6 +265,7 @@ object APASynthesisExamples {
     println(solution._1)
     println(solution._2)
   }
+
   def paboucle() {
     val a = I("a")
     val condition = c - y <= a - x*6 && a - x*6 <= b + x + y*7  &&  x > y + z && z*9 <= x+y && z*5 > b + x + 8

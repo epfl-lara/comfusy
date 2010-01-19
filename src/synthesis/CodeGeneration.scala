@@ -54,7 +54,7 @@ trait CodeGeneration {
         var trees: List[Tree] = Nil
 
         // builds a MatrixIterator with the results of the Bezout function.
-        trees = trees ::: (ValDef(matrixSym, New(Ident(matrixIteratorClass), List(List( Apply(Select(Select(Ident(synthesisPack), synthesisCommon), bezoutFunction), List(Apply(Ident(definitions.ListModule), ts.map(apaInTermToCode(map, _))))))))) :: Nil)
+        trees = trees ::: (ValDef(matrixSym, New(Ident(matrixIteratorClass), List(List( Apply(Select(Select(Ident(synthesisPack), synthesisCommon), bezoutFunction), List(Literal(Constant(1)), Apply(Ident(definitions.ListModule), ts.map(apaInTermToCode(map, _))))))))) :: Nil)
 
         (vss.flatten:List[synthesis.InputVar]).foreach((v:synthesis.InputVar) => {
           val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "t")).setInfo(definitions.IntClass.tpe)
