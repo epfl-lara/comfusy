@@ -1,26 +1,49 @@
 package synthesis
 
+/*****************************
+ *  Abstract syntax tree     *
+ *****************************/
+
 // dummy
 object APASyntaxTree
 
-/// ************* Abstract syntax tree ***************///
+/** Describes the concept of a variable. */
 trait APAVariable
 
+/** A class which can be converted to a linear combination. */
 trait ConvertibleToCombination {
+  
+  /** Returns the corresponding linear combination equivalent to this expression. */
   implicit def toCombination():APACombination
 }
 
+/** Class representing an output variable, with some syntactic sugar. */
 case class OutputVar(name: String) extends APAVariable with ConvertibleToCombination {
   def toCombination():APACombination = APACombination(this)
-  // Syntactic sugar
+  
+  /** Syntactic sugar */
+  /** Returns the addition of this variable with a linear combination. */
   def +(pac : APACombination) = pac+APACombination(this)
+  
+  /** Returns the addition of this variable with an input variable. */
   def +(v : InputVar) = APAInputCombination(v)+APACombination(this)
+  
+  /** Returns the addition of this variable with another output variable. */
   def +(v : OutputVar) = APACombination(v)+APACombination(this)
+  
+  /** Returns the multiplication of this variable by an integer. */
   def *(i : Int) = APACombination(i, this)
+  
+  /** Returns the multiplication of this variable by an input variable. */
   def *(i : InputVar):APACombination = APACombination(APAInputCombination(0, Nil), (APAInputCombination(0, (1, i)::Nil), this)::Nil)
 }
 
+/** Abstract class describing an expression. Almost everything is an expression, except variables.
+ *  Methods to convert or extract are regrouped here.
+ */
 abstract sealed class APAExpression {
+  
+  /** Returns the list of output variables this expression contains. */
   def output_variables:List[OutputVar] = this match {
     case APACombination(c, o) => o map (_._2)
     case APADivides(c, pac) => pac.output_variables
@@ -36,6 +59,8 @@ abstract sealed class APAExpression {
     case APAMaximum(l) => (l flatMap (_.output_variables)).removeDuplicates
     case APANegation(e)=> e.output_variables
   }
+  
+  /** Returns the list of input variables this expression contains. */
   def input_variables:List[InputVar] = this match {
     case APACombination(c, o) => (c.input_variables ++ ((o map (_._1)) flatMap (_.input_variables))).removeDuplicates
     case APADivides(c, pac) => (pac.input_variables ++ c.input_variables).removeDuplicates
@@ -52,16 +77,22 @@ abstract sealed class APAExpression {
     case APANegation(e)=> e.input_variables
   }
 
+  /** Returns a boolean indicating if the number of output variables is at least 1. */
   def has_output_variables: Boolean = (output_variables != Nil) //OptimizeMe!
-  /// Simplified version of this expression
+  
+  /** Returns a simplified version of this expression. */
   def simplified: APAExpression
+  
+  /** Returns a version of this expression where all occurences of y have been replaced by the linear combination t. */
   def replace(y: OutputVar, t: APACombination): APAExpression
   
-  // Default override for debug purpose only
+  /** Returns a string representing this expression. */
   override def toString = toCommonString
   
+  /** Returns a string representing this expression. Alias for toString. */
   def toCommonString = toStringGeneral(APASynthesis.rendering_mode)
   
+  /** Returns a string representing this expression, depending on the rendering mode rm.*/
   def toStringGeneral(rm: RenderingMode) = this match {
     case APADivides(n, pac) =>
       val pac_s = pac.toNiceString
@@ -133,14 +164,17 @@ abstract sealed class APAExpression {
     }
     case APANegation(eq) => rm.not_symbol+"("+eq.toString+")"
   }
-  
+
+  /** Returns a string representing this expression, in Scala. */
   def toScalaString = {
     toStringGeneral(RenderingScala())
   }
+
+  /** Returns a string representing this expression, in Python. */
   def toPythonString = {
     toStringGeneral(RenderingPython())
   }
-  
+
   /** Method to assume signs of input terms.
    * 
    * To assume all occurences of the variable b to be >= 0 in myterm, call :
@@ -151,16 +185,28 @@ abstract sealed class APAExpression {
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAExpression
 }
 
+/** Class representing formulas.
+ *  A formula is an expression, which when evaluated, gives a boolean indicating if the formula is true or false.
+ */
 abstract sealed class APAFormula extends APAExpression {
+  
+  /** Returns a version of this formula where all occurences of the input variable y have been replaced by the input term t. */
   def replace(y: InputVar, t: APAInputTerm): APAFormula
+  
+  /** Returns a version of this formula where all occurences of the output variable y have been replaced by the linear combination t. */
   def replace(y: OutputVar, t: APACombination): APAFormula
+  
+  /** Processes multiple replacements of input variables. */
   def replaceListInput(lxt : List[(InputVar, APAInputTerm)]): APAFormula = {
     lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
   }
+  
+  /** Processes multiple replacements of output variables. */
   def replaceList(lxt : List[(OutputVar, APACombination)]): APAFormula = {
     lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
   }
-  // This matching IS exhaustive since other matches are made if this is an atomic equation
+  
+  /** Returns a simplified version of this formula. */
   def simplified: APAFormula = this match {
     case APAConjunction(eqs) => val eqs_simplified = eqs map (_.simplified)
     eqs_simplified match {
@@ -186,13 +232,20 @@ abstract sealed class APAFormula extends APAExpression {
       case APAFalse() => APATrue()
       case l => APANegation(l)
     }
+    // This matching IS exhaustive since this method is overriden in other child classes.
     case t:APAFormula => throw new Error("formulas should have been simplified : "+this)
   }
+  
+  /** Returns the conjunction of this and that formulas. */
   def &&(that : APAFormula) = APAConjunction(this::that::Nil).simplified
+  
+  /** Returns the disjunction of this and that formulas. */
   def ||(that : APAFormula)  = APADisjunction(this::that::Nil).simplified
-  // Get a stream of the DNF form of the formula
+
+  /** Get a stream of the DNF form of the formula. */
   def getEquations = getEquations_tailrec(Nil)
 
+  /** Get a stream of the DNF form of the formula. Recursive version. */
   def getEquations_tailrec(currentList: List[APAEquation]) : Stream[List[APAEquation]] = this match {
     case t@APADivides(_, _)     => Stream(currentList++List(t))
     case t@APAEqualZero(_)      => Stream(currentList++List(t))
@@ -216,9 +269,10 @@ abstract sealed class APAFormula extends APAExpression {
     case APANegation(f) => throw new Error("Negation is not supported yet") 
   }
   
+  /** Gets a stream of immediate equalities and inequalities if there are some + the rest as a stream. of possibilities. */
   def getLazyEquations = getLazyEquations_tailrec
   
-  // Gets a stream of immediate equalities if there are some + the rest as a stream
+  /** Gets a stream of immediate equalities and inequalities if there are some + the rest as a stream. of possibilities. Recursive version. */
   def getLazyEquations_tailrec: FormulaSplit = this match {
     case t@APADivides(_, _)     => FormulaSplit(Nil, List(t), Stream.empty) 
     case t@APAEqualZero(_)      => FormulaSplit(t::Nil, Nil, Stream.empty)
@@ -234,14 +288,22 @@ abstract sealed class APAFormula extends APAExpression {
     case APAFalse() => FormulaSplit(Nil, APAFalse()::Nil, Stream.empty)
     case APANegation(f) => throw new Error("Negation is not supported yet") 
   }
+  
+  /** Assumes the sign of the input term t1 throughout the formula. */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAFormula
 }
 
+/** Object providing methods for the class FormulaSplit.
+ */
 object FormulaSplit {
+  
+  /** Returns the conjunction of two FormulaSplit. */
   def conjunction(f1:FormulaSplit, f2:FormulaSplit):FormulaSplit = (f1, f2) match {
     case (FormulaSplit(eqs1, ineqs1, rest1), FormulaSplit(eqs2, ineqs2, rest2)) =>
         FormulaSplit(eqs1++eqs2, ineqs1++ineqs2, disjunction(rest1, rest2))
   }
+  
+  /** Returns the disjunction of two FormulaSplit. */
   def disjunction(sf1:Stream[FormulaSplit], sf2:Stream[FormulaSplit]):Stream[FormulaSplit] = {
     if(sf1.isEmpty) sf2
     else if(sf2.isEmpty) sf1
@@ -251,7 +313,12 @@ object FormulaSplit {
   }
 }
 
+/** A FormulaSplit is a formula representing a conjunction of known equalities and inequalities, and a disjunction of other formula splits.
+ *  e.g. FormulaSplit(eqs, noneqs, remaining) === (eqs && noneqs && (remaining1 || remaining2 || ...))  
+ */
 case class FormulaSplit(eqs: List[APAEqualZero], noneqs : List[APAEquation], remaining:Stream[FormulaSplit]) {
+  
+  /** Replaces all output variables by corresponding value in this FormulaSplit. */
   def replaceList(assignments: List[(OutputVar, APACombination)]): FormulaSplit = {
     var new_equalities = eqs
     var new_nonequalities = noneqs
@@ -267,8 +334,11 @@ case class FormulaSplit(eqs: List[APAEqualZero], noneqs : List[APAEquation], rem
   }
 }
 
-// Atomic equations
+/** Abstract class describing atomic equations, or literals, like divide predicates, greater or equal to zero predicates, equal to zero, etc.
+ */
 abstract sealed class APAEquation extends APAFormula {
+  
+  /** Returns a simplified version of this equation. */
   override def simplified: APAEquation = this match {
     case APADivides(_, APACombination(APAInputCombination(0, Nil), Nil)) => APATrue()
     case APADivides(APAInputCombination(1, Nil), pac) => APATrue()
@@ -295,30 +365,54 @@ abstract sealed class APAEquation extends APAFormula {
     case APATrue() => APATrue()
     case APAFalse() => APAFalse()
   }
+  
+  /** Returns a version of this equation where all occurences of the output variable y have been replaced by the term t. */
   def replace(y: OutputVar, t: APACombination): APAEquation
+  
+  /** Returns a version of this equation where each occurence of the input term t1 is assumed to have the sign s. */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAEquation
 }
+
+/** Class representing terms, i.e. expressions that would evaluate to integers when fully evaluated.
+ */
 abstract class APATerm extends APAExpression {
+  
+  /** Returns a version of this term where all occurences of the output variable y have been replaced by the term t. */
   def replace(y: OutputVar, t: APACombination):APATerm
+  
+  /** Returns a version of this term where all occurences of the input variable y have been replaced by the input term t. */
   def replace(y: InputVar, t: APAInputTerm):APATerm
+  
+  /** Returns a simplified version of this term. */
   def simplified:APATerm
   
+  /** Processes multiple replacements of output variables. */
   def replaceList(lxt : List[(OutputVar, APACombination)]): APATerm = {
     lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
   }
+  
+  /** Processes multiple replacements of input variables. */
   def replaceListInput(lxt : List[(InputVar, APAInputTerm)]): APATerm = {
     lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
   }
+  
+  /** Returns a version of this term where each occurence of the input term t1 is assumed to have the sign s. */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APATerm
 }
 
 /*******************
-  *  General terms  *
-  *******************/
+ *  General terms  *
+ *******************/
 
+/** Class representing a division of a linear combination by an input term.
+ *  It is not required for the denominator to divide the expression.
+ */ // TODO : comment from here.
 case class APADivision(numerator : APACombination, denominator : APAInputTerm) extends APATerm {
+  
   def replace(y: OutputVar, t: APACombination):APATerm = APADivision(numerator.replace(y, t), denominator).simplified
+  
   def replace(y: InputVar, t: APAInputTerm):APATerm = APADivision(numerator.replace(y, t), denominator.replace(y, t)).simplified
+  
   def simplified:APATerm = {
     val result = (numerator.simplified, denominator) match {
     case (n, APAInputCombination(1, Nil)) => n
@@ -329,6 +423,8 @@ case class APADivision(numerator : APACombination, denominator : APAInputTerm) e
     }
     result
   }
+  
+  
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APATerm = {
     val new_numerator = numerator.assumeSignInputTerm(t1, s)
     val new_denominator = denominator.assumeSignInputTerm(t1, s)
@@ -405,7 +501,7 @@ case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInpu
     case (i, q) => i::q
   }
   
-  /// Simplified means that the variables are alphabetically sorted, that there are no null coefficients, and the gcd of all coefficients is 1.
+  /** Simplified means that the variables are alphabetically sorted, that there are no null coefficients, and the gcd of all coefficients is 1. */
   def simplified: APACombination = {
     val output_linear2 = (output_linear sort by_OutputVar_name).foldRight[List[(APAInputTerm, OutputVar)]](Nil){ case (a, b) => fold_Outputvar_name(a, b)}
     APACombination(const_part.simplified, output_linear2 remove (_._1.isZero)).propagateCoefficientAbstraction(this)
@@ -438,35 +534,35 @@ case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInpu
   def normalized = normalized_aux(false)
   def normalizedForEquality = normalized_aux(true)
   
-  /// Division of this combination by an integer. Caution ! It should be divisible.
+  /** Division of this combination by an integer. Caution ! It should be divisible. */
   def /(i : Int): APACombination = {
     APACombination(const_part / APAInputCombination(i), output_linear map {t => (t._1 / APAInputCombination(i), t._2)})
   }
-  /// Multiplication by an integer
+  /** Multiplication by an integer */
   def *(i : Int): APACombination = {
     val result = APACombination(const_part * APAInputCombination(i), output_linear map {t => (t._1 * APAInputCombination(i), t._2)})
     result.assumeMultCoefficientAbstraction(this, i)
   }
-  /// Multiplication by an APAInputTerm
+  /** Multiplication by an APAInputTerm */
   def *(i : APAInputTerm): APACombination = {
     APACombination(const_part * i, output_linear map {t => (t._1 * i, t._2)})
   }
-  /// Addition between two combinations
+  /** Addition between two combinations */
   def +(pac : APACombination): APACombination = pac match {
     case APACombination(c, o) => 
       val result = APACombination(const_part + c, output_linear ++ o).simplified
       result.assumeSumCoefficientAbstraction(this, pac)
   }
-  /// Substraction between two combinations
+  /** Substraction between two combinations */
   def -(that : APACombination): APACombination = this + (that * (-1))
-  /// Addition with a new variable and its coefficient
+  /** Addition with a new variable and its coefficient */
   def +(kv : (APAInputTerm, OutputVar)): APACombination = this + APACombination(APAInputCombination(0, Nil), kv::Nil)
   def +(k : APAInputTerm): APACombination = this + APACombination(k, Nil)
-  /// Substraction with a new variable and its coefficient
+  /** Substraction with a new variable and its coefficient */
   def -(kv : (APAInputTerm, OutputVar)): APACombination = this - APACombination(APAInputCombination(0, Nil), kv::Nil)
   def -(k : APAInputTerm): APACombination = this + APACombination(-k, Nil)
   def unary_-(): APACombination = (APACombination(APAInputCombination(0, Nil), Nil) - this)
-  /// Comparison
+  /** Comparison */
   def ===(that: APACombination):APAEquation = APAEqualZero(this - that).simplified
   def >= (that: APACombination):APAEquation = APAGreaterEqZero(this - that).simplified
   def >  (that: APACombination):APAEquation = APAGreaterZero(this - that).simplified
@@ -479,7 +575,7 @@ case class APACombination(const_part: APAInputTerm, output_linear: List[(APAInpu
   def <  (that: APAInputTerm):APAEquation = this <   APACombination(that)
   def divisible_by(that: APAInputTerm): APAEquation = APADivides(that, this)
   
-  /// Replacement of a variable by another
+  /** Replacement of a variable by another */
   def replace(y: OutputVar, t: APACombination):APACombination = (y, t) match {
     case (OutputVar(name), pac_for_y@APACombination(ci2, o2)) => 
       val (output_linear_with_y, output_linear_without_y) = output_linear partition (_._2 == y)

@@ -96,17 +96,17 @@ object SignAbstraction {
 trait SignAbstraction {
   
   //@{ Private section
-  /// Private variables containing the abstraction.
+  /** Private variables containing the abstraction. */
   private var private_pos: Boolean = true
   private var private_nul: Boolean = true
   private var private_neg: Boolean = true
   
-  /// Clones the expression with a new abstraction
+  /** Clones the expression with a new abstraction. */
   private def cloneWithSign(a: SignAbstraction):this.type = {
     this.cloneWithSign(a.can_be_positive, a.can_be_zero, a.can_be_negative)
   }
   
-  /// Clones the expression with a new abstraction where the signs are given
+  /** Clones the expression with a new abstraction where the signs are given. */
   private def cloneWithSign(pos_ : Boolean, nul_ : Boolean, neg_ : Boolean):this.type = {
     val result = normalClone().asInstanceOf[SignAbstraction]
     result.setSign(pos_, nul_, neg_)
@@ -115,129 +115,129 @@ trait SignAbstraction {
   //@}
 
   //@{ Protected section
-  /// A direct method to set up the sign.
-  /// Used by subclasses methods only.
+  /** A direct method to set up the sign.
+   * Used by subclasses methods only.*/
   protected def setSign(pos_ :Boolean, nul_ :Boolean, neg_ :Boolean):Unit = {
     private_pos = pos_
     private_nul = nul_
     private_neg = neg_
   }
-  /// A direct method to set up the sign according to an integer.
-  /// Used by subclasses methods only.
+  /** A direct method to set up the sign according to an integer.
+   *  Used by subclasses methods only. */
   protected def setSign(i: Int):Unit = {
     setSign(i > 0, i == 0, i < 0) 
   }
   
-  /// A direct method to set up the sign according to an existing abstraction.
-  /// Used by subclasses methods only.
+  /** A direct method to set up the sign according to an existing abstraction.
+   * Used by subclasses methods only. */
   protected def setSign(i: SignAbstraction):Unit = {
     setSign(i.can_be_positive, i.can_be_zero, i.can_be_negative)
   }
   
-  /// Returns a clone of the expression updated with a better or new knowledge about the sign.
+  /** Returns a clone of the expression updated with a better or new knowledge about the sign. */
   protected def propagateSign_internal(i: SignAbstraction):this.type = {
     cloneWithSign(can_be_positive && i.can_be_positive, can_be_zero && i.can_be_zero, can_be_negative && i.can_be_negative)
   }
   //@}
 
   //@{ Sign check methods
-  /// Returns true if the expression can be positive.
+  /** Returns true if the expression can be positive. */
   def can_be_positive:Boolean = private_pos
   
-  /// Returns true if the expression can be zero.
+  /** Returns true if the expression can be zero. */
   def can_be_zero:Boolean     = private_nul
   
-  /// Returns true if the expression can be negative.
+  /** Returns true if the expression can be negative. */
   def can_be_negative:Boolean = private_neg
   
-  /// Returns true if the expression is defined and positive
+  /** Returns true if the expression is defined and positive. */
   def isPositive() = can_be_positive && !can_be_negative && !can_be_zero
   
-  /// Returns true if the expression is defined and negative
+  /** Returns true if the expression is defined and negative. */
   def isNegative() = !can_be_positive && can_be_negative && !can_be_zero
   
-  /// Returns true if the expression is defined and (positive or zero) 
+  /** Returns true if the expression is defined and (positive or zero). */ 
   def isPositiveZero() = (can_be_positive || can_be_zero) && !can_be_negative
     
-  /// Returns true if the expression cannot be positive nor zero
+  /** Returns true if the expression cannot be positive nor zero. */
   def isNotPositiveZero() = !can_be_positive && !can_be_zero
   
-  /// Returns true if the expression is defined and (negative or zero)
+  /** Returns true if the expression is defined and (negative or zero). */
   def isNegativeZero() = (can_be_negative || can_be_zero) && !can_be_positive
   
-  /// Returns true if the expression cannot be negative nor zero
+  /** Returns true if the expression cannot be negative nor zero. */
   def isNotNegativeZero() = !can_be_negative && !can_be_zero
   
-  /// Returns true if the expression cannot be positive
+  /** Returns true if the expression cannot be positive. */
   def isNotPositive() = !can_be_positive
   
-  /// Returns true if the expression cannot be negative
+  /** Returns true if the expression cannot be negative. */
   def isNotNegative() = !can_be_negative
   
-  /// Returns true if the expression is defined an is zero
+  /** Returns true if the expression is defined an is zero. */
   def isZero() = can_be_zero && !can_be_positive && !can_be_negative
   
-  /// Returns true if the expression cannot be zero
+  /** Returns true if the expression cannot be zero. */
   def isNotZero() = !can_be_zero
   
-  /// Returns true if the expression is not defined.
+  /** Returns true if the expression is not defined. */
   def isNotDefined() = !can_be_positive && !can_be_negative && !can_be_zero
   //@}
 
   //@{ Assuming sign methods
-  /// Assumes the sign of a integer
+  /** Assumes the sign of a integer. */
   def assumeSign(i: Int):this.type = {
     propagateSign(ASign(i > 0, i == 0, i < 0))
   }
   
-  /// Assumes a sign == 0
+  /** Assumes a sign == 0. */
   def assumeZero():this.type = {
     assumeSign(0)
   }
   
-  /// Assumes a sign > 0
+  /** Assumes a sign > 0 */
   def assumePositive():this.type = {
     assumeSign(1)
   }
   
-  /// Assumes a sign < 0
+  /** Assumes a sign < 0 */
   def assumeNegative():this.type = {
     assumeSign(-1)
   }
   
-  /// Assumes a sign >= 0
+  /** Assumes a sign >= 0 */
   def assumePositiveZero():this.type = {
     propagateSign(ASign(true, true, false))
   }
   
-  /// Assumes a sign <= 0
+  /** Assumes a sign <= 0 */
   def assumeNegativeZero():this.type = {
     propagateSign(ASign(false, true, true))
   }
   
-  /// Assumes a sign != 0
+  /** Assumes a sign != 0 */
   def assumeNotZero():this.type = {
     propagateSign(ASign(true, false, true))
   }
   
-  /// Assumes a sign from a sign abstraction
+  /** Assumes a sign from a sign abstraction */
   def assumeSign(i: SignAbstraction):this.type = {
     propagateSign(ASign(i.can_be_positive, i.can_be_zero, i.can_be_negative))
   }
   
-  /// Assumes a potential zero sign from a sign abstraction
-  /// This is used products : a has the same zero-sign as a*b.
+  /** Assumes a potential zero sign from a sign abstraction
+   *  This is used products : a has the same zero-sign as a*b. */
   def assumeNotzerobility(i: SignAbstraction):this.type = {
     propagateSign(ASign(true, i.can_be_zero, true))
   }
   //@}
   
   //@{ Methods to specialize
-  /// A cloning method to implement in order to use this class.
+  /** A cloning method to implement in order to use this class. */
   def normalClone():this.type
   
-  /// A method which processes the sign propagation of an expression.
-  /// Can be overriden to propagate the sign within sub-elements of the expression.
+  /** A method which processes the sign propagation of an expression.
+   *  Can be overriden to propagate the sign within sub-elements of the expression. */
   def propagateSign(i: SignAbstraction):this.type = {
     propagateSign_internal(i)
   }
@@ -245,15 +245,13 @@ trait SignAbstraction {
 }
 
 
-/** The simplest class to implement a sign abstraction.
- */
+/** The simplest class to implement a sign abstraction. */
 case class ASign(pos_ : Boolean, nul_ : Boolean, neg_ : Boolean) extends SignAbstraction {
   setSign(pos_, nul_, neg_)
   def normalClone():this.type = ASign(pos_, nul_, neg_).asInstanceOf[this.type]
 }
 
-/** The simplest class to implement a positive or zero sign abstraction
- */
+/** The simplest class to implement a positive or zero sign abstraction. */
 case class PositiveZeroSign() extends SignAbstraction {
   setSign(true, true, false)
   def normalClone():this.type = PositiveZeroSign().asInstanceOf[this.type]
@@ -273,7 +271,7 @@ case class PositiveZeroSign() extends SignAbstraction {
 trait CoefficientAbstraction {
 
   //@{ Private section
-  /// Private variables containing the abstraction.
+  /** Private variables containing the abstraction. */
   private var p_allCoefficientsCanBeZero:    Boolean = true
   private var p_oneCoefficientsCanBeNonZero: Boolean = true
   
@@ -288,26 +286,26 @@ trait CoefficientAbstraction {
   //@}
   
   //@{ Protected section
-  /// A direct method to set up coefficient abstraction
-  /// Used by subclasses methods only.
+  /** A direct method to set up coefficient abstraction.
+   *  Used by subclasses methods only. */
   protected def setNotAllCoefficientsAreZero() = {
     setCoefficients(false, true)
   }
 
-  /// A direct method to set up coefficient abstraction
-  /// Used by subclasses methods only.
+  /** A direct method to set up coefficient abstraction.
+   *  Used by subclasses methods only. */
   protected def setNoCoefficients() = {
     setCoefficients(true, true)
   }
   
-  /// A direct method to set up coefficient abstraction
-  /// Used by subclasses methods only.
+  /** A direct method to set up coefficient abstraction.
+   * Used by subclasses methods only. */
   protected def setCoefficients(a: Boolean, n: Boolean) = {
     p_allCoefficientsCanBeZero = a
     p_oneCoefficientsCanBeNonZero = n
   }
   
-  /// A method to clone the expression with the knowledge of another coefficient abstraction. 
+  /** A method to clone the expression with the knowledge of another coefficient abstraction. */
   protected def propagateCoefficientAbstraction(o : CoefficientAbstraction):this.type = {
     cloneWithCoefficientAbstraction(allCoefficientsCanBeZero    && o.allCoefficientsCanBeZero,
                                     oneCoefficientsCanBeNonZero &&  o.oneCoefficientsCanBeNonZero)
@@ -315,31 +313,31 @@ trait CoefficientAbstraction {
   //@}
   
   //@{ Coefficient check methods
-  /// Returns true if all the coefficients are zero.
+  /** Returns true if all the coefficients are zero. */
   def allCoefficientsAreZero    =  p_allCoefficientsCanBeZero && !p_oneCoefficientsCanBeNonZero
   
-  /// Returns true if not all the coefficients are zero.
+  /** Returns true if not all the coefficients are zero. */
   def notAllCoefficientsAreZero =  p_oneCoefficientsCanBeNonZero && !p_allCoefficientsCanBeZero
   
-  /// Returns true if all the coefficients are zero.
+  /** Returns true if all the coefficients are zero. */
   def allCoefficientsCanBeZero    =  p_allCoefficientsCanBeZero
   
-  /// Returns true if not all the coefficients are zero.
+  /** Returns true if not all the coefficients are zero. */
   def oneCoefficientsCanBeNonZero =  p_oneCoefficientsCanBeNonZero
   //@}
 
   //@{ Assuming coefficients methods
-  /// Assumes that all coefficients are zero
+  /** Assumes that all coefficients are zero. */
   def assumeAllCoefficientsAreZero : this.type = {
     propagateCoefficientAbstraction(ACoef(true, false))
   }
   
-  /// Assumes that not all coefficients are zero
+  /** Assumes that not all coefficients are zero. */
   def assumeNotAllCoefficientsAreZero : this.type = {
     cloneWithCoefficientAbstraction(ACoef(false, true))
   }
   
-  /// Assumes a coefficient abstraction of a sum
+  /** Assumes a coefficient abstraction of a sum. */
   def assumeSumCoefficientAbstraction(a: CoefficientAbstraction, o: CoefficientAbstraction):this.type = {
     if(a.allCoefficientsAreZero && o.allCoefficientsAreZero) {
       assumeAllCoefficientsAreZero
@@ -350,7 +348,7 @@ trait CoefficientAbstraction {
     } else this
   }
   
-  /// Assumes a coefficient abstraction of a multiplication by an integer
+  /** Assumes a coefficient abstraction of a multiplication by an integer. */
   def assumeMultCoefficientAbstraction(o: CoefficientAbstraction, i: Int):this.type = {
     if(i==0) {
       assumeAllCoefficientsAreZero
@@ -362,13 +360,12 @@ trait CoefficientAbstraction {
 
   
   //@{ Methods to specialize
-  /// A cloning method to implement in order to use this class.
+  /** A cloning method to implement in order to use this class. */
   def normalClone():this.type
   //@}
 }
 
-/** The simplest class to implement a coefficient abstraction.
- */
+/** The simplest class to implement a coefficient abstraction. */
 case class ACoef(a: Boolean, n: Boolean) extends CoefficientAbstraction {
   setCoefficients(a, n)
   def normalClone():this.type = ACoef(a, n).asInstanceOf[this.type]

@@ -7,14 +7,14 @@ package synthesis
  */
 sealed abstract class APAAbstractCondition {
   
-  /// Returns a string representing the condition in current rendering mode.
-  /// See APASynthesis.rendering_mode to change it.
+  /** Returns a string representing the condition in current rendering mode.
+   *  See APASynthesis.rendering_mode to change it. */
   def toCommonString : String
 
-  /// Returns the boolean value of this condition under a certain variable mapping.
+  /** Returns the boolean value of this condition under a certain variable mapping. */
   def execute(l: Map[InputVar, Int]): Boolean
   
-  /// Returns the list of input variables contained in this conditions.  
+  /** Returns the list of input variables contained in this conditions.   */
   def input_variables: List[InputVar]
 }
 
@@ -25,7 +25,7 @@ sealed abstract class APAAbstractCondition {
  */
 object APACondition {
   
-  /// Returns a typical false precondition.
+  /** Returns a typical false precondition. */
   def False: APACondition = APACondition(Nil, APAFalse(), APAEmptySplitCondition())
   
   /** Creates a new APACondition after optimizing the arguments 
@@ -76,7 +76,7 @@ object APACondition {
  */
 case class APACondition(input_assignment: List[InputAssignment], global_condition: APAFormula, pf : APASplitCondition) extends APAAbstractCondition {
   
-  /// Adds an assumption after the existing assumptions and before the advanced formula.
+  /** Adds an assumption after the existing assumptions and before the advanced formula. */
   def &&(more_cond: APAFormula):APACondition = APACondition(input_assignment, global_condition && more_cond, pf)
   
   /** Adds an assumption before the existing assumptions.
@@ -84,33 +84,33 @@ case class APACondition(input_assignment: List[InputAssignment], global_conditio
    */
   def assumeBefore(more_cond: APAFormula):APACondition = APACondition(input_assignment, more_cond && global_condition, pf)
   
-  /// Returns if the condition is trivially true.
+  /** Returns if the condition is trivially true. */
   def isTrivial(): Boolean = global_condition == APATrue() && pf == APAEmptySplitCondition()
 
-  /// Returns the list of the input variables appearing anywere in the precondition
+  /** Returns the list of the input variables appearing anywere in the precondition */
   def input_variables = ((global_condition.input_variables ++ pf.input_variables) -- (input_assignment flatMap (_.input_variables))).removeDuplicates
   
-  /// Returns a parsable string representing the body of the condition, without variable assignment,
-  /// under the current rendering mode.
+  /** Returns a parsable string representing the body of the condition, without variable assignment,
+   *  under the current rendering mode. */
   protected def conditionBodyToCommonString(rm: RenderingMode) = (global_condition, pf) match {
     case (_, APAEmptySplitCondition()) => global_condition.toString
     case (APATrue(), _) => pf.toString
     case _ => "("+global_condition.toString+") "+rm.and_symbol+" ("+pf.toString+")"
   }
   
-  /// Returns a parsable string representing the complete condition
+  /** Returns a parsable string representing the complete condition */
   def conditionToCommonString = APASynthesis.rendering_mode match {
     case RenderingScala() => conditionToScalaString
     case RenderingPython() => conditionToPythonString
   }
   
-  /// Returns a parsable scala string representing the complete condition
+  /** Returns a parsable scala string representing the complete condition */
   def conditionToScalaString = input_assignment match {
     case Nil => conditionBodyToCommonString(APASynthesis.rendering_mode)
     case _ => "{"+(input_assignment map (_.toCommonString("")) reduceLeft (_+";"+_)) + ";"+conditionBodyToCommonString(APASynthesis.rendering_mode)+"}"
   }
   
-  /// Returns a parsable python string representing the complete condition
+  /** Returns a parsable python string representing the complete condition */
   def conditionToPythonString = {
     def conditionToPythonString_aux(input_assignment: List[InputAssignment]):String = input_assignment match {
       case Nil => conditionBodyToCommonString(APASynthesis.rendering_mode)
@@ -120,10 +120,10 @@ case class APACondition(input_assignment: List[InputAssignment], global_conditio
     conditionToPythonString_aux(input_assignment)
   }
   
-  /// toString alias
+  /** toString alias */
   def toCommonString = conditionToCommonString
   
-  /// toString alias
+  /** toString alias */
   override def toString = toCommonString
   
   def execute(l: Map[InputVar, Int]): Boolean = {
@@ -156,13 +156,13 @@ case class APACondition(input_assignment: List[InputAssignment], global_conditio
  */
 sealed abstract class APASplitCondition extends APAAbstractCondition {
   
-  /// Returns a string representing the condition.
+  /** Returns a string representing the condition. */
   override def toString = toStringGeneral(APASynthesis.rendering_mode)
   
-  /// Method to override. Return astring representing the solution under the given RenderingMode
+  /** Method to override. Return astring representing the solution under the given RenderingMode */
   protected def toStringGeneral(rm: RenderingMode):String
   
-  /// Alias for toString
+  /** Alias for toString */
   def toCommonString:String = toStringGeneral(APASynthesis.rendering_mode)
 }
 
@@ -175,16 +175,16 @@ sealed abstract class APASplitCondition extends APAAbstractCondition {
  */
 case class APACaseSplitCondition(csl: List[APAAbstractCondition]) extends APASplitCondition {
   
-  /// Returns the list of the input variables contained in this disjunction
+  /** Returns the list of the input variables contained in this disjunction */
   def input_variables = (csl flatMap (_.input_variables)).removeDuplicates
   
-  /// Returns a boolean indicating if the disjunction is true.
+  /** Returns a boolean indicating if the disjunction is true. */
   def execute(l: Map[InputVar, Int]): Boolean = csl exists (_.execute(l))
   
-  /// Returns a string representing this disjunction.
+  /** Returns a string representing this disjunction. */
   protected def toStringGeneral(rm: RenderingMode):String = csl map { t => ("("+(t.toCommonString)+")") } reduceLeft (_ + " "+rm.or_symbol+" " + _)
   
-  /// Returns a condition made from this disjunction.
+  /** Returns a condition made from this disjunction. */
   def toCondition: APACondition = APACondition(Nil, APATrue(), this)
 }
 
@@ -195,13 +195,13 @@ case class APACaseSplitCondition(csl: List[APAAbstractCondition]) extends APASpl
  */
 case class APAEmptySplitCondition() extends APASplitCondition {
   
-  /// Returns the empty set of input variables.
+  /** Returns the empty set of input variables. */
   def input_variables = Nil
   
-  /// Returns true, the truth value of this expression
+  /** Returns true, the truth value of this expression */
   def execute(l: Map[InputVar, Int]): Boolean = true
   
-  /// Returns an empty string, which represents an empty condition.
+  /** Returns an empty string, which represents an empty condition. */
   protected def toStringGeneral(rm: RenderingMode) = ""
 }
 
@@ -218,10 +218,10 @@ case class APAEmptySplitCondition() extends APASplitCondition {
  */
 case class APAForCondition(vl: List[InputVar], lower_range: APAInputTerm, upper_range: APAInputTerm, global_condition: APACondition) extends APASplitCondition {
   
-  /// Returns the list of input variables in this condition, not part of the existentially quantified variables.
+  /** Returns the list of input variables in this condition, not part of the existentially quantified variables. */
   def input_variables = (global_condition.input_variables) -- vl
 
-  /// Returns a string representing the bounded quantified condition in a programming language.
+  /** Returns a string representing the bounded quantified condition in a programming language. */
   protected def toStringGeneral(rm: RenderingMode):String = {
     rm match {
       case RenderingScala() => toScalaString
@@ -229,14 +229,14 @@ case class APAForCondition(vl: List[InputVar], lower_range: APAInputTerm, upper_
     }
   }
   
-  /// Returns a string containing the tuple of the existential variable's names
+  /** Returns a string containing the tuple of the existential variable's names */
   def varsToString(vl : List[InputVar]) : String = vl match {
     case Nil => ""
     case (v::Nil) => v.name
     case (v::q) => "("+v.name+","+varsToString(q)+")" 
   }
   
-  /// Returns a python string representing the condition
+  /** Returns a python string representing the condition */
   def toPythonString:String = {
     val basic_range = "xrange("+lower_range+", 1 + "+upper_range+")" 
     val list_ranges = "("+varsToString(vl)+" "+ (vl map { case i => "for "+i.name+" in "+basic_range}).reduceLeft(_ + " " + _) + ")"
@@ -245,7 +245,7 @@ case class APAForCondition(vl: List[InputVar], lower_range: APAInputTerm, upper_
     condition
   }
   
-  /// Returns a scala string representing the condition
+  /** Returns a scala string representing the condition */
   def toScalaString:String = {
     val basic_range = "("+lower_range+" to "+upper_range+")" 
     var ranges = basic_range
@@ -260,7 +260,7 @@ case class APAForCondition(vl: List[InputVar], lower_range: APAInputTerm, upper_
     (find_string::cond_string::match_string::Nil).reduceLeft((_ + _))
   }
   
-  /// Returns a boolean indicating if the condition is true under a given mapping
+  /** Returns a boolean indicating if the condition is true under a given mapping */
   def execute(l: Map[InputVar, Int]): Boolean = {
     if(global_condition == APACondition.False) return false
     val lr:Int = lower_range.replaceList(APAAbstractProgram.toAPAInputAssignment(l)) match {

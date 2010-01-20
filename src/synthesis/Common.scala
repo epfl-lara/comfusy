@@ -21,7 +21,7 @@ object Common {
     }
   }
 
-  /// Shortcuts
+  /** Shortcuts */
   def bezout(e: Int, a : Int*): List[Int] = bezout(e, a.toList)
   def bezoutWithBase(e: Int, a : Int*): List[List[Int]] = bezoutWithBase(e, a.toList)
   

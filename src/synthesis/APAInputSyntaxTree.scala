@@ -40,51 +40,51 @@ trait ConvertibleToInputTerm {
  */
 sealed abstract class APAInputTerm extends SignAbstraction {
 
-  /// Returns the same expression, but simplified. 
+  /** Returns the same expression, but simplified. */
   def simplified:APAInputTerm // OptimizeMe : Store when it's already simplified in order not to compute two times the same thing
 
-  /// @return The list of Input variables that this expression contains.
+  /** @return The list of Input variables that this expression contains. */
   def input_variables: List[InputVar]
   
   //@{ Operators
-  /// @param that A combination eventually containing output variables.
-  /// @return The sum of this input term and the provided APACombination.
+  /** @param that A combination eventually containing output variables. */
+  /** @return The sum of this input term and the provided APACombination. */
   def +(that : APACombination):APACombination = that + APACombination(this)
   
-  /// @return The difference of this input term and the provided APACombination.
+  /** @return The difference of this input term and the provided APACombination. */
   def -(that : APACombination):APACombination = -that + APACombination(this)
   
-  /// @return The product of this input term and the provided APACombination.
+  /** @return The product of this input term and the provided APACombination. */
   def *(that : APACombination):APACombination = that * this
   
-  /// @return The sum of this input term and the provided input term.
+  /** @return The sum of this input term and the provided input term. */
   def +(that : APAInputTerm): APAInputTerm = APAInputAddition(this, that).simplified
   
-  /// @return The division of this input term by the provided input term.
+  /** @return The division of this input term by the provided input term. */
   def /(that : APAInputTerm): APAInputTerm = APAInputDivision(this, that).simplified
   
-  /// @return The product of this input term by the provided input term.
+  /** @return The product of this input term by the provided input term. */
   def *(that : APAInputTerm): APAInputTerm = APAInputMultiplication(this, that).simplified
   
-  /// @return The difference between this input term and the provided one.
+  /** @return The difference between this input term and the provided one. */
   def -(that : APAInputTerm): APAInputTerm =  (this, that) match {
     case (t1: APAInputCombination, t2: APAInputCombination) => t1 - t2
     case _ => this+(that*APAInputCombination(-1))
   }
   
-  /// @return The opposite of this input term.
+  /** @return The opposite of this input term. */
   def unary_-(): APAInputTerm = APAInputCombination(0, Nil) - this
   //@}
   
-  /// @return This input term where all occurences of y have been replaced by t.
+  /** @return This input term where all occurences of y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm
 
-  /// @return This input term where all occurences of y have been replaced by t.
+  /** @return This input term where all occurences of y have been replaced by t. */
   def replaceList(lxt : List[(InputVar, APAInputTerm)]): APAInputTerm = {
     lxt.foldLeft(this){ case (result, (x, t)) => result.replace(x, t) }
   }
   
-  /// @return This input term where the sign abstraction s is applied to all occurences of t1
+  /** @return This input term where the sign abstraction s is applied to all occurences of t1 */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):APAInputTerm = {
     (this, t1, -t1) match {
       case (t0:APAInputCombination, t1:APAInputCombination, _) if t0 == t1 =>
@@ -100,41 +100,41 @@ sealed abstract class APAInputTerm extends SignAbstraction {
     }
   }
   
-  /// @return The integer that this input term represents if it exists, else throws an exception.
+  /** @return The integer that this input term represents if it exists, else throws an exception. */
   def toInt: Int = this match {
     case APAInputCombination(i, Nil) => i
     case _ =>
       throw new Exception(this + " cannot be converted to an integer")
   }
   
-  /// Converts this input term to a string
+  /** Converts this input term to a string */
   override def toString = toGeneralString
   
-  /// Converts this input term to a string in the current rendering mode
-  /// See APASynthesis.rendering_mode.
+  /** Converts this input term to a string in the current rendering mode */
+  /** See APASynthesis.rendering_mode. */
   def toGeneralString: String = APASynthesis.rendering_mode match {
     case rm@RenderingPython() => toPythonString(rm)
     case rm@RenderingScala() => toScalaString(rm)
   }
   
-  /// Converts this input term to a Python string.
-  /// @rm should be a RenderingPython()
+  /** Converts this input term to a Python string. */
+  /** @rm should be a RenderingPython() */
   protected def toPythonString(rm: RenderingMode): String = this match {
     case APAInputLCM(l) => rm.lcm_symbol+"(["+(l map (_.toCommonString(rm)) reduceLeft (_ + "," + _)) +"])"
     case APAInputGCD(l) => rm.gcd_symbol+"(["+(l map (_.toCommonString(rm)) reduceLeft (_ + "," + _)) +"])"
     case _ => toCommonString(rm)
   }
   
-  /// Converts this input term to a Scala string.
-  /// @rm should be a RenderingScala()
+  /** Converts this input term to a Scala string. */
+  /** @rm should be a RenderingScala() */
   protected def toScalaString(rm: RenderingMode): String = this match {
     case APAInputLCM(l) => rm.lcm_symbol+"(List("+(l map (_.toCommonString(rm)) reduceLeft (_ + "," + _)) +"))"
     case APAInputGCD(l) => rm.gcd_symbol+"(List("+(l map (_.toCommonString(rm)) reduceLeft (_ + "," + _)) +"))"
     case _ => toCommonString(rm)
   }
   
-  /// Converts this input term to a common string in the provided rendering mode.
-  /// rm should be equal to APASynthesis.rendering_mode
+  /** Converts this input term to a common string in the provided rendering mode. */
+  /** rm should be equal to APASynthesis.rendering_mode */
   def toCommonString(rm:RenderingMode):String = this match {
     case APAInputMultiplication(Nil) => "1"
     case APAInputMultiplication(a::Nil) => a.toCommonString(rm)
@@ -173,13 +173,13 @@ sealed abstract class APAInputTerm extends SignAbstraction {
   }
 }
 
-/// Definition of an input variable.
+/** Definition of an input variable. */
 case class InputVar(name: String) extends SignAbstraction with ConvertibleToInputTerm with APAVariable {
   
-  /// Clones the variable without the sign abstraction
+  /** Clones the variable without the sign abstraction */
   def normalClone():this.type = InputVar(name).asInstanceOf[this.type]
   
-  /// Return an InputTerm containing the variable.
+  /** Return an InputTerm containing the variable. */
   def toInputTerm():APAInputCombination = {
     if(isZero) return APAInputCombination(0)
     APAInputCombination(this)
@@ -204,26 +204,26 @@ object APAInputCombination {
 case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputVar)]) extends APAInputTerm {
   setSign(SignAbstraction.linearCombinationSign(coefficient, input_linear))
 
-  /// Clones the expression without the sign abstraction.
+  /** Clones the expression without the sign abstraction. */
   def normalClone():this.type = APAInputCombination(coefficient, input_linear).asInstanceOf[this.type]
 
-  /// Returns the list of input variables that this expression contains.
+  /** Returns the list of input variables that this expression contains. */
   def input_variables: List[InputVar] = input_linear map (_._2)
   
-  /// Returns true if the variable i1 is has a name lexicographically less than the variable i2.
+  /** Returns true if the variable i1 is has a name lexicographically less than the variable i2. */
   def by_InputVar_name(i1:(Int, InputVar), i2:(Int, InputVar)) : Boolean = (i1, i2) match {
     case ((_, InputVar(name1)), (_, InputVar(name2))) => name1 < name2
   }
   
-  /// Adds the coefficiented variable i to the list of existing coefficiented regrouped_vars.
-  /// Assumes that if the variable appears exist, it appears first.
+  /** Adds the coefficiented variable i to the list of existing coefficiented regrouped_vars. */
+  /** Assumes that if the variable appears exist, it appears first. */
   def fold_Inputvar_name(i:(Int, InputVar), regrouped_vars:List[(Int, InputVar)]):List[(Int, InputVar)] = (i, regrouped_vars) match {
     case (i, Nil) => i::Nil
     case ((coef1, InputVar(name1)), (coef2, InputVar(name2))::q) if name1 == name2 => (coef1 + coef2, InputVar(name1))::q
     case (i, q) => i::q 
   }
   
-  /// Intercepts the sign propagation, and if there is a unique variable, propagates the sign abstraction to it.
+  /** Intercepts the sign propagation, and if there is a unique variable, propagates the sign abstraction to it. */
   override def propagateSign(s: SignAbstraction):this.type = { //Intercepts the sign propagation
     val result = (coefficient, input_linear) match {
       case (0, (i, v)::Nil) => 
@@ -249,13 +249,13 @@ case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputV
     APAInputCombination(coefficient, input_linear3 remove { case (i, v) => i == 0 || v.isZero}).propagateSign(this)
   }
   
-  /// Returns the list of the coefficients in front of the input variables + the constant coefficient.
+  /** Returns the list of the coefficients in front of the input variables + the constant coefficient. */
   def coefficient_list = (coefficient :: ((input_linear map (_._1)) ))
   
-  /// Returns true if there is a non-null coefficient in the combination
+  /** Returns true if there is a non-null coefficient in the combination. */
   def has_gcd_coefs: Boolean = coefficient_list exists (_ != 0)
   
-  /// Returns the gcd of all coefficients. <code>has_gcd_coefs</code> is assumed.
+  /** Returns the gcd of all coefficients. <code>has_gcd_coefs</code> is assumed. */
   def gcd_coefs = Common.gcdlist(coefficient_list)
   
   /** Returns the first sign present.
@@ -267,59 +267,59 @@ case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputV
     case None => 1
   }
   
-  /// Returns the division of this combination by an integer.
-  /// Needs the coefficients to be divisible by i.
+  /** Returns the division of this combination by an integer. */
+  /** Needs the coefficients to be divisible by i. */
   def /(i : Int): APAInputCombination = {
     APAInputCombination(coefficient / i, input_linear map {t => (t._1 / i, t._2)}).assumeSign(SignAbstraction.multSign(this, SignAbstraction.number(i)))
   }
   
-  /// Returns true if this combination can be safely divisible by i.
+  /** Returns true if this combination can be safely divisible by i. */
   def safelyDivisibleBy(i : Int): Boolean = {
     coefficient % i == 0 && (input_linear forall { case (k, v) => k % i == 0})
   }
   
-  /// Returns the division of an input combination by another
-  /// The result is not necessarily a input combination
+  /** Returns the division of an input combination by another. */
+  /** The result is not necessarily a input combination */
   def /(that : APAInputCombination): APAInputTerm = {
     APAInputDivision(this, that).simplified
   }
   
-  /// Returns the multiplication of this input combination by an integer
+  /** Returns the multiplication of this input combination by an integer. */
   def *(i : Int): APAInputCombination = {
     APAInputCombination(coefficient * i, input_linear map {t => (t._1 * i, t._2)}).assumeSign(SignAbstraction.multSign(this, SignAbstraction.number(i)))
   }
   
-  /// Returns the multiplication of this input combination by another input combination.
-  /// The result is not necessarily a input combination
+  /** Returns the multiplication of this input combination by another input combination. */
+  /** The result is not necessarily a input combination */
   def *(that : APAInputCombination): APAInputTerm = {
     APAInputMultiplication(this, that).simplified
   }
   
-  /// Returns the sum of two input combinations
+  /** Returns the sum of two input combinations. */
   def +(pac : APAInputCombination): APAInputCombination = pac match {
     case APAInputCombination(c, i) => 
       APAInputCombination(coefficient + c, input_linear ++ i).simplified.assumeSign(SignAbstraction.addSign(this, pac))
   }
 
-  /// Returns the difference between two input combinations
+  /** Returns the difference between two input combinations. */
   def -(that : APAInputCombination): APAInputCombination = this + (that * (-1))
   
-  /// Returns the sum of this input combination with a coefficiented variable.
+  /** Returns the sum of this input combination with a coefficiented variable. */
   def +(kv : (Int, InputVar)): APAInputCombination = this + APAInputCombination(0, kv::Nil)
   
-  /// Returns the sum of this input combination with an integer
+  /** Returns the sum of this input combination with an integer. */
   def +(k : Int): APAInputCombination = this + APAInputCombination(k, Nil)
   
-  /// Returns the difference of this input combination with a coefficiented variable
+  /** Returns the difference of this input combination with a coefficiented variable. */
   def -(kv : (Int, InputVar)): APAInputCombination = this - APAInputCombination(0, kv::Nil)
   
-  /// Returns the difference of this input combination with an integer
+  /** Returns the difference of this input combination with an integer. */
   def -(k : Int): APAInputCombination = this + APAInputCombination(-k, Nil)
   
-  /// Returns the opposite of this input combination
+  /** Returns the opposite of this input combination. */
   override def unary_-(): APAInputCombination = (APAInputCombination(0, Nil) - this).propagateSign(SignAbstraction.oppSign(this))
   
-  /// Returns the linear expression where the input variable y has been replaced by the expression t
+  /** Returns the linear expression where the input variable y has been replaced by the expression t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     val (input_linear_with_y, input_linear_without_y) = input_linear partition (_._2 == y)
     val pac_without_y = APAInputCombination(coefficient, input_linear_without_y)
@@ -333,6 +333,7 @@ case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputV
     result.propagateSign(this)
   }
   
+  /** Returns this expression where the fact that t1 has sign s has been taken into account. */
   override def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction) = {
     t1 match {
       case t@APAInputCombination(coefficient2, Nil) => this // Would be strange to arrive there.
@@ -352,8 +353,10 @@ case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputV
     }
   }
 
-  override def toString = toNiceString
+  /** Returns a string representing this linear combination. */
+  override def toString = toNiceString // Comment this to keep the abstract syntax tree representation
   
+  /** Returns a nice string representing an usual linear combination, e.g. like 5+3a. */
   def toNiceString:String = {
     def inputElementToString(kv : (Int, InputVar)) = kv._1 match {
       case 1 => kv._2.name
@@ -381,8 +384,15 @@ case class APAInputCombination(coefficient: Int, input_linear: List[(Int, InputV
     if(s == "") "0" else s
   }
 }
+
+/** Object providing methods to create a division of input terms, with some optimizations.
+ */
 object APAInputDivision {
+  
+  /** Returns a simplified division of input terms. */
   def apply(a: APAInputTerm, b: APAInputTerm): APAInputTerm = APAInputDivision(a::Nil, b::Nil).simplified
+  
+  /** Returns a division where common occurences between n and d have been removed (simplification). */
   def simplifyNumDenom(n: List[APAInputTerm], d:List[APAInputTerm]):APAInputTerm = {
     val (to_delete, n_ok) = n partition (d contains _)
     if(to_delete != Nil) {
@@ -400,13 +410,16 @@ object APAInputDivision {
   }
 }
 
-//Internally, this representation is optimized to have the constant coefficients in the front
-// That's of course if you don't create these lists yourself.
-// Point: The denominator has to divide the numerator.
+/** Class representing a integer division between input terms. 
+ *  It should be guaranteed that the denominator divides the numerator.
+ */
 case class APAInputDivision(numerator: List[APAInputTerm], denominator : List[APAInputTerm]) extends APAInputTerm {
   setSign(SignAbstraction.divSign(SignAbstraction.multSign(numerator), SignAbstraction.multSign(denominator)))
+  
+  /** Returns a clone of this expression without the sign abstraction. */
   def normalClone():this.type = APAInputDivision(numerator, denominator).asInstanceOf[this.type]
 
+  /** Returns a simplified version of this division. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val result = ((APAInputMultiplication(numerator).simplified, APAInputMultiplication(denominator).simplified) match {
@@ -422,22 +435,33 @@ case class APAInputDivision(numerator: List[APAInputTerm], denominator : List[AP
     })
     result.propagateSign(this)
   }
+  
+  /** Returns the division where the variable y has been replaced by the input term t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     APAInputDivision(numerator map (_.replace(y, t)), denominator map (_.replace(y, t))).simplified.propagateSign(this)
   }
+  
+  /** Returns the list of input variables that this division contains. */
   def input_variables: List[InputVar] = {
     ((numerator flatMap (_.input_variables)) ++ (denominator flatMap (_.input_variables))).removeDuplicates
   }
 }
+
+/** Object providing a method to create multiplications of input terms.
+ */
 object APAInputMultiplication {
   def apply(a: APAInputTerm*):APAInputTerm = APAInputMultiplication(a.toList).simplified
 }
-// When simplified, all coefficients are in the front.
+
+/** Class representing a multiplication between input terms. */
 case class APAInputMultiplication(operands: List[APAInputTerm]) extends APAInputTerm {
   //assert(operands.length > 1) // Else it does not make sense, it should have been simplified.
   setSign(SignAbstraction.multSign(operands))
+  
+  /** Returns a clone of this multiplication without the sign abstraction. */
   def normalClone():this.type = APAInputMultiplication(operands).asInstanceOf[this.type]
   
+  /** Returns a simplified equal version of this multiplication. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val result = operands flatMap (_.simplified match {
@@ -464,6 +488,8 @@ case class APAInputMultiplication(operands: List[APAInputTerm]) extends APAInput
     result.propagateSign(this)
   }
 
+  /** Returns the same multiplication where the non-zerobility of the applied sign abstraction. */
+  /** is propagated to all sub-children. */
   override def propagateSign(s: SignAbstraction):this.type = { //Intercepts the sign propagation
     if(s.isNotZero) {
       val new_operands = operands map (_.assumeNotzerobility(s))
@@ -473,21 +499,26 @@ case class APAInputMultiplication(operands: List[APAInputTerm]) extends APAInput
     }
   }
   
+  /** Returns an expression where all occurences of the variable y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     APAInputMultiplication(operands map (_.replace(y, t))).propagateSign(this).simplified
   }
+  
+  /** Returns the list of input variables contained in this multiplication. */
   def input_variables: List[InputVar] = {
     (operands flatMap (_.input_variables)).removeDuplicates
   }
 }
 
+/** Object providing a method to create additions of input terms and others.
+ */
 object APAInputAddition {
-  def apply(a: APAInputTerm*):APAInputAddition = APAInputAddition(a.toList)
-}
-case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
-  setSign(SignAbstraction.addSign(l))
-  def normalClone():this.type = APAInputAddition(l).asInstanceOf[this.type]
   
+  /** Returns an addition of the given input terms. */
+  def apply(a: APAInputTerm*):APAInputTerm = APAInputAddition(a.toList).simplified
+  
+  /** Separate the input terms in l between input combinations and general input terms. */
+  /** Used to group input combinations together */
   def partitionInputCombination(l: List[APAInputTerm]): (List[APAInputCombination], List[APAInputTerm]) = l match {
     case Nil => (Nil, Nil)
     case ((t@APAInputCombination(_, _))::q) =>
@@ -497,6 +528,19 @@ case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
       val (a, b) = partitionInputCombination(q)
       (a, p::b)
   }
+}
+
+/** Class representing an addition of given input terms.
+ *  Additions differs from linear combinations, because they can store general additions
+ *  like a*b+c+b^2+1
+ */
+case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
+  setSign(SignAbstraction.addSign(l))
+  
+  /** Returns a clone of this addition without the top-level abstraction (strange ?). */
+  def normalClone():this.type = APAInputAddition(l).asInstanceOf[this.type]
+  
+  /** Returns a simplified version of this addition. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val result = l flatMap (_.simplified match {
@@ -507,7 +551,7 @@ case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
       case Nil => APAInputCombination(0, Nil)
       case a::Nil => a
       case l => 
-        partitionInputCombination(l) match {
+        APAInputAddition.partitionInputCombination(l) match {
           case (Nil, l) =>
             APAInputAddition(l)
           case (input_combinations, not_input_combinations) =>
@@ -521,17 +565,27 @@ case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
     }
     result.propagateSign(this)
   }
+  
+  /** Returns an expression where all occurences of the variable y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     APAInputAddition(l map (_.replace(y, t))).propagateSign(this).simplified
   }
+  
+  /** Returns the list of input variables contained in this addition. */
   def input_variables: List[InputVar] = {
     (l flatMap (_.input_variables)).removeDuplicates
   }
 }
 
+/** Class representing an absolute value of an input term.
+ */
 case class APAInputAbs(arg: APAInputTerm) extends APAInputTerm {
   setSign(SignAbstraction.absSign(arg))
+  
+  /** Returns a clone of this absolute value without the abstraction. */
   def normalClone():this.type = APAInputAbs(arg).asInstanceOf[this.type]
+  
+  /** Returns a simplified version of this absolute value. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val result = arg.simplified match {
@@ -542,18 +596,29 @@ case class APAInputAbs(arg: APAInputTerm) extends APAInputTerm {
     }
     result.propagateSign(this)
   }
+  
+  /** Returns an expression where all occurences of the variable y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     val result = APAInputAbs(arg.replace(y, t)).simplified
     result.propagateSign(this)
   }
+  
+  /** Returns the list of input variables contained in this absolute value. */
   def input_variables: List[InputVar] = {
     arg.input_variables
   }
 }
 
+/** Class representing the gcd of a list of input terms.
+ *  The list of input terms should be guaranteed not to be all zero at the same time.
+ */
 case class APAInputGCD(l: List[APAInputTerm]) extends APAInputTerm {
   setSign(1)
+  
+  /** Returns a clone of this gcd without the abstraction. */
   def normalClone():this.type = APAInputGCD(l).asInstanceOf[this.type]
+  
+  /** Returns a simplified version of this gcd. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val (integers, non_integers)  = APAInputTerm.partitionInteger(l map (_.simplified))
@@ -568,17 +633,27 @@ case class APAInputGCD(l: List[APAInputTerm]) extends APAInputTerm {
     }
     result.propagateSign(this)
   }
+  
+  /** Returns an expression where all occurences of the variable y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     APAInputGCD(l map (_.replace(y, t))).simplified.propagateSign(this)
   }
+  
+  /** Returns the list of input variables contained in this gcd. */
   def input_variables: List[InputVar] = {
     (l flatMap (_.input_variables)).removeDuplicates
   }
 }
 
+/** Class representing the lcm of a list of input terms.
+ */
 case class APAInputLCM(l: List[APAInputTerm]) extends APAInputTerm {
   setSign(1)
+  
+  /** Returns a clone of this lcm without the abstraction. */
   def normalClone():this.type = APAInputLCM(l).asInstanceOf[this.type]
+  
+  /** Returns a simplified version of this lcm. */
   def simplified:APAInputTerm = {
     if(isZero) return APAInputCombination(0)
     val (integers, non_integers)  = APAInputTerm.partitionInteger(l map (_.simplified))
@@ -592,9 +667,13 @@ case class APAInputLCM(l: List[APAInputTerm]) extends APAInputTerm {
     }
     result.propagateSign(this)
   }
+  
+  /** Returns an expression where all occurences of the variable y have been replaced by t. */
   def replace(y: InputVar, t: APAInputTerm):APAInputTerm = {
     APAInputLCM(l map (_.replace(y, t))).simplified.propagateSign(this)
   }
+  
+  /** Returns the list of input variables contained in this lcm. */
   def input_variables: List[InputVar] = {
     (l flatMap (_.input_variables)).removeDuplicates
   }

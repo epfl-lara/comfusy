@@ -41,7 +41,7 @@ case class RenderingPython() extends RenderingMode {
 }
 
 object APASynthesis {
-  /// ************* Synthesis options ***************///
+  /** ************* Synthesis options *************** */
   // To allow rendering expressions of the for a %% b where a %% 0 == a,  and else (k %% b) is always between 0 and b-1 and congruent to k modulo b.  
   var advanced_modulo = false
   
@@ -51,7 +51,7 @@ object APASynthesis {
   // Other rendering mode
   var rendering_mode:RenderingMode = RenderingScala()
   
-  // ************* Different ways of specifying solving conditions ***************///
+  // ************* Different ways of specifying solving conditions ***************/** */
   
   def getOutputVariables(eqs: List[APAEquation]):List[OutputVar] = {
     (eqs flatMap (_.output_variables)).removeDuplicates
@@ -105,7 +105,7 @@ object APASynthesis {
   }
   
 
-  /// ************* Function used in the algorithm ***************///
+  /** ************* Function used in the algorithm *************** */
   val alphabet = "abcdefghijklmnopqrstuvwxyz"
   def newOutputVariable(input_existing: List[InputVar], output_existing : List[OutputVar]): OutputVar = {
     //var typical = "xyzmnpqrstuvw"
@@ -246,7 +246,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
   def addBezoutInputAssignment (xl: List[List[InputVar]],  tl: List[APAInputTerm]) = input_assignments  = input_assignments ++ (BezoutInputAssignment(xl, tl).simplified)
   def addOutputAssignment(y: OutputVar, t: APATerm) = output_assignments = (y, t.simplified)::output_assignments
   def removeInputAssignment(y: InputVar) = input_assignments = input_assignments remove {case SingleInputAssignment(x, _) if x == y => true; case _ => false}
-  ///*********** Functions used in the algorithm ***************//
+  /************* Functions used in the algorithm *************** */
   def simplifyEquations(equations: List[APAEquation]) : List[APAEquation] = {
     equations flatMap {
       case e@APADivides(k, APACombination(c, Nil)) =>
@@ -267,19 +267,19 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     case (_, _) => false
   }
   
-  /// Returns the remaining non_equalities (non_equalities should not contain equalities, nor will the returned term do)
+  /** Returns the remaining non_equalities (non_equalities should not contain equalities, nor will the returned term do) */
   def solveEqualities(data: FormulaSplit): APASplit = {    
     val FormulaSplit(equalities, non_equalities, remaining_disjunctions) = data
 
-    /// Make sure all equalities have at least one output variable, else remove them.
+    /** Make sure all equalities have at least one output variable, else remove them. */
     val (interesting_equalities, precondition_equalities) = equalities partition (_.has_output_variables)
     addPrecondition(APAConjunction(precondition_equalities))
     
 
     def minInputTerms(coef1: APAInputTerm, coef2:APAInputTerm) = if(needsLessOperations(coef1, coef2)) coef1 else coef2
     
-    /// Sorting function (OptimizeMe)
-    /// Priority to constant terms
+    /** Sorting function (OptimizeMe) */
+    /** Priority to constant terms */
     def by_least_outputvar_coef(eq1: APAEqualZero, eq2: APAEqualZero): Boolean = (eq1, eq2) match {
       case (APAEqualZero(pac1@APACombination(c1, o1)), APAEqualZero(pac2@APACombination(c2, o2))) =>
         val min_coefs_o1 = o1 map (_._1) reduceLeft (minInputTerms(_, _))
@@ -505,8 +505,8 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     getInequalitiesForVariable_aux(v, inequalities, (Nil, Nil, Nil, Nil))
   }
   
-  /// Solve them, so now we only have non-equalities
-  /// The simplification of inequalities can generate new equalities, so we handle them.
+  /** Solve them, so now we only have non-equalities */
+  /** The simplification of inequalities can generate new equalities, so we handle them. */
   def solveEquations(data: FormulaSplit):APASplit = {
     val FormulaSplit(equalities, non_equalities, remaining_disjunctions) = data
     // Let's extract the divisibility predicates and converts them to equalities.
@@ -528,13 +528,13 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
       }
       assert(remaining_disjunctions.isEmpty)
       
-      /// Get only inequalities, plus maybe with "False" in other
+      /** Get only inequalities, plus maybe with "False" in other */
       val (equalities2, inequalities, is_consistent) = partitionPAGreaterEqZero(non_equalities)
       // equalities2 should be empty given that new_non_equalities cannot contain equalities
       assert(equalities2 == Nil)
       if(!is_consistent) return APAFalseSplit()
   
-      /// Remove redundant inequalities, maybe generating equalities
+      /** Remove redundant inequalities, maybe generating equalities */
       //val (inequalities3, equalities3, is_consistent3) = removeRedundancies(inequalities)
       val (inequalities3, equalities3, is_consistent3) = (inequalities, Nil, true)
       
@@ -545,8 +545,8 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
       var current_inequalities = inequalities3
       var current_noninequalities = List[APAEquation]()
       var is_consistent4 = true
-      /// Solves for unbounded variables, when there are no case splits.
-      /// The value of output_variable is going to change, but we just need the initial one.
+      /** Solves for unbounded variables, when there are no case splits. */
+      /** The value of output_variable is going to change, but we just need the initial one. */
       var current_inequalities_saved = APATrue()::current_inequalities
       while(current_inequalities != current_inequalities_saved) {
         current_inequalities_saved = current_inequalities
@@ -754,7 +754,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
 
   
   def solve():(APACondition, APAProgram) = {
-    ///*********** Main algorithm ***************//
+    /************* Main algorithm *************** */
     //***** Step 1: There are no quantifiers by construction. Nothing to do
     //***** Step 2: Remove divisibility constraints
     // Convert "Greater" to "GreaterEq"

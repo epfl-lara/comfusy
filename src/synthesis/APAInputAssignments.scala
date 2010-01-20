@@ -21,56 +21,56 @@ object InputAssignment {
  */
 sealed abstract class InputAssignment {
 
-  /// Returns a list of input variables contained in the expression of this input assignment
+  /** Returns a list of input variables contained in the expression of this input assignment */
   def input_variables: List[InputVar]
   
-  /// Extracts a non-exhaustive list of simple assignments of InputTerms to InputVars.
+  /** Extracts a non-exhaustive list of simple assignments of InputTerms to InputVars. */
   def extract:List[(InputVar, APAInputTerm)]
   
-  /// Returns a string representing this assignment under the current rendering mode. 
+  /** Returns a string representing this assignment under the current rendering mode.  */
   def toCommonString(indent: String):String = APASynthesis.rendering_mode match {
     case RenderingScala() => toScalaString(indent)
     case RenderingPython() => toPythonString(indent)
   }
   
-  /// Returns a scala string representing the variables on the left of <code>val ... = ...</code>
+  /** Returns a scala string representing the variables on the left of <code>val ... = ...</code> */
   def varToScalaString = this match {
     case SingleInputAssignment(i, t) => i.name
     case BezoutInputAssignment(vl, tl) => "List(" + (vl map { l => "List(" + (l map (_.name) reduceLeft (_+","+_)) + ")"} reduceLeft (_+","+_)) + ")"
   }
   
-  /// Returns a scala string representing the value on the right of <code>val ... = ...</code>
+  /** Returns a scala string representing the value on the right of <code>val ... = ...</code> */
   def valToScalaString = this match {
     case SingleInputAssignment(i, t) => t
     case BezoutInputAssignment(vl, tl) => "Common.bezoutWithBase(1, "+(tl map (_.toString) reduceLeft (_+", "+_))+")"
   }
   
-  /// Returns a python string representing the variables on the left of <code>val ... = ...</code>
+  /** Returns a python string representing the variables on the left of <code>val ... = ...</code> */
   def varToPythonString = this match {
     case SingleInputAssignment(i, t) => i.name
     case BezoutInputAssignment(vl, tl) => "(" + (vl map { l => "(" + (l map (_.name) reduceLeft (_+","+_)) + ")"} reduceLeft (_+","+_)) + ")"
   }
   
-  /// Returns a python string representing the value on the right of <code>val ... = ...</code>
+  /** Returns a python string representing the value on the right of <code>val ... = ...</code> */
   def valToPythonString = this match {
     case SingleInputAssignment(i, t) => t
     case BezoutInputAssignment(vl, tl) => "bezoutWithBase(1, "+(tl map (_.toString) reduceLeft (_+", "+_))+")"
   }
   
-  /// Returns the whole assignment as a scala string
+  /** Returns the whole assignment as a scala string */
   def toScalaString(indent: String): String =  {
     indent+"val "+ varToScalaString + " = " + valToScalaString
   }
   
-  /// Returns the whole assignment as a python string
+  /** Returns the whole assignment as a python string */
   def toPythonString(indent: String): String = {
     indent+ varToPythonString + " = " + valToPythonString
   }
   
-  /// Returns the assignment were all input variables have been replaced by corresponding input terms.
+  /** Returns the assignment were all input variables have been replaced by corresponding input terms. */
   def replaceList(l : List[(InputVar, APAInputTerm)]):List[InputAssignment]
   
-  /// Returns the assignment were the sign abstraction s is applied to each occurence of t1
+  /** Returns the assignment were the sign abstraction s is applied to each occurence of t1 */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction):InputAssignment
 }
 
@@ -87,8 +87,8 @@ case class BezoutInputAssignment(v: List[List[InputVar]], t: List[APAInputTerm])
   def extract = Nil
   def replaceList(l: List[(InputVar, APAInputTerm)]) = BezoutInputAssignment(v, t map (_.replaceList(l))).simplified
   
-  /// Returns a simplified version of the assignment as a list of input assignments.
-  /// Simplification occurs if some coefficients are equal to 1 or -1, or in other simple cases.
+  /** Returns a simplified version of the assignment as a list of input assignments. */
+  /** Simplification occurs if some coefficients are equal to 1 or -1, or in other simple cases. */
   def simplified: List[InputAssignment] = {
     t map (_.simplified) match {
       case t if t forall {
@@ -171,8 +171,8 @@ case class BezoutInputAssignment(v: List[List[InputVar]], t: List[APAInputTerm])
     }
   }
   
-  /// Converts an integer Bézout solution to a InputTerm solution, where specific integers
-  /// given in map_index_terms are replaced with some input terms.
+  /** Converts an integer Bézout solution to a InputTerm solution, where specific integers */
+  /** given in map_index_terms are replaced with some input terms. */
   def convertAssignments(v: List[List[InputVar]],
                          solved_for_ints: List[List[Int]],
                          map_index_term:  Map[Int, APAInputTerm]): List[(InputVar, APAInputTerm)] = {
@@ -192,6 +192,6 @@ case class BezoutInputAssignment(v: List[List[InputVar]], t: List[APAInputTerm])
     ).flatten
   }
   
-  /// Propagate a sign assumption. Does nothing for Bézout assignment.
+  /** Propagate a sign assumption. Does nothing for Bézout assignment. */
   def assumeSignInputTerm(t1: APAInputTerm, s: SignAbstraction) = this
 }
