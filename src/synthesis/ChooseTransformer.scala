@@ -374,6 +374,30 @@ trait ChooseTransformer
 
           val (paPrec,paProg) = PASynthesis.solve(linOutVars.map(PASynthesis.OutputVar(_)), mikaelStyleFormula)
 
+          // SATisfiability check...
+          if(emitWarnings && !(paPrec.global_condition == PASynthesis.PATrue())) {
+            val myStyle = conditionToFormula(paPrec)
+
+            if(myStyle != False()) {
+              // we need to tell Z3 that sizes of existing sets are not negative.
+              val posCardConstraints: Formula = And(preCardAssigns.map(_._1).map((varName: String) => LessEqThan(IntLit(0), Variable(varName))))
+              dprintln("card cons: " + posCardConstraints)
+
+              dprintln("My-style: " + myStyle)
+              isSat(And(posCardConstraints :: Not(myStyle) :: Nil)) match {
+                case (Some(true), Some(ass)) => {
+                  val assString = ass.filter(ae => !preCardAssigns.map(_._1).contains(ae._1)).map(p => p._1 + " = " + p._2).mkString(", ")
+                  reporter.info(a.pos, "Synthesis predicate is not always satisfiable." + (if (!assString.isEmpty) " (eg. " + assString + ")" else ""), true)
+                }
+                case (Some(false), _) => ;
+                case (_,_) => reporter.info(a.pos, "Synthesis predicate may not always be satisfiable (decision procedure did not respond).", true)
+              }
+            } else {
+              //reporter.info(a.pos, "Synthesis predicate is never satisfiable.", true)
+            }
+          }
+          // end of SAT check.
+
           // CODE GENERATION
           var symbolMap: SymbolMap = Map.empty
           // we put in the 'c' symbols
