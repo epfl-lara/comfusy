@@ -108,9 +108,6 @@ trait ChooseTransformer
             }
           }
 
-          // Mikael's AST for examples/CoordinatesSimpler.scala
-          val mikaelsAST = APAConjunction(List(APAConjunction(List(APAConjunction(List(APAConjunction(List(APAEqualZero(APACombination(APAInputCombination(0,List((1,InputVar("i")))),List((APAInputCombination(-1,List()),OutputVar("j")), (APAInputCombination(0,List((-1,InputVar("x")))),OutputVar("k"))))), APAGreaterEqZero(APACombination(APAInputCombination(0,List()),List((APAInputCombination(1,List()),OutputVar("j"))))))), APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("x")))),List((APAInputCombination(-1,List()),OutputVar("j"))))))), APAGreaterEqZero(APACombination(APAInputCombination(0,List()),List((APAInputCombination(1,List()),OutputVar("k"))))))), APAGreaterEqZero(APACombination(APAInputCombination(-1,List((1,InputVar("y")))),List((APAInputCombination(-1,List()),OutputVar("k")))))))
-
           //val (apaPrec, apaProg) = APASynthesis.solve(mikaelsAST) //apaStyleFormula)
           val (apaPrec, apaProg) = APASynthesis.solve(apaStyleFormula)
           //ddprintln("APA-Style formula : " + mikaelsAST) // apaStyleFormula)

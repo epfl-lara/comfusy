@@ -340,7 +340,7 @@ object Arithmetic {
           for(val vs2 <- varSets) {
             if(!(vs1 eq vs2) && !(vs1 ** vs2).isEmpty) {
               ok = false
-              println("CE: " + vs1 + " ... " + vs2)
+              //println("CE: " + vs1 + " ... " + vs2)
             }
           }
         }
