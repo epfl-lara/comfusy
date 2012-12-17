@@ -4,7 +4,7 @@ import Keys._
 object Comfusy extends Build {
   val commonSettings = Seq(
     scalaVersion := "2.10.0-RC5",
-    scalaBinaryVersion := "2.10",
+    scalaBinaryVersion := "2.10.0-RC5",
     organization := "org.improving",
     version := "1.0.0",
     scalacOptions ++= Seq("-deprecation", "-unchecked")
