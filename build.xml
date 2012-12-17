@@ -25,7 +25,7 @@
     <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/>
 
     <!-- libs -->
-    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.2.jar" />
+    <property name="scalatest.jar" value="${lib.dir}/scalatest_2.9.2-1.6.1.jar" />
 
     <!-- required to use the tasks scalac, fsc and scaladoc -->
     <taskdef resource="scala/tools/ant/antlib.xml">

@@ -69,8 +69,8 @@ trait CodeGeneration {
     private def variable(map: SymbolMap, varNme: String): Tree = {
       Ident(map(varNme))
     }
-  
-    def programToCode(prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree = 
+
+    def programToCode(prec: PACondition, prog: PAProgram, withPrec: Boolean): Tree =
       programToCode(initialMap, prec, prog, withPrec)
 
     def apaProgramToCode(prec: APACondition, prog: APAProgram, withPrec: Boolean): Tree =
@@ -113,7 +113,7 @@ trait CodeGeneration {
 
         // generates the big case split (hopefully)
         val bigIteExpr: Tree = prog.case_splits.programs.foldRight[Tree](throwTree)((condProgPair: (PACondition,PAProgram), rest: Tree) => {
-          If(conditionToCode(map, condProgPair._1), programToCode(map, PACondition(Nil,PATrue()), condProgPair._2, false), rest) 
+          If(conditionToCode(map, condProgPair._1), programToCode(map, PACondition(Nil,PATrue()), condProgPair._2, false), rest)
         })
 
         if (valCount == 1) {
@@ -140,7 +140,7 @@ trait CodeGeneration {
         preCheckCode ::: inputAss ::: caseSplitAss ::: outputAss
       ,
       if(prog.output_variables.size == 1) {
-        variable(map, prog.output_variables(0).name) 
+        variable(map, prog.output_variables(0).name)
       } else {
         New(
           TypeTree(definitions.tupleType(prog.output_variables.map(x => definitions.IntClass.tpe))),
@@ -183,7 +183,7 @@ trait CodeGeneration {
             val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "y")).setInfo(definitions.IntClass.tpe)
             map = map + (vn -> newSym)
           })
- 
+
           val iteExpr: Tree = programs.foldRight[Tree](throwTree)((condProgPair: (APACondition, APAProgram), rest: Tree) => {
             If(apaConditionToCode(map, condProgPair._1), apaProgramToCode(map, APACondition(Nil, APATrue(), APAEmptySplitCondition()), condProgPair._2, false), rest)
           })
@@ -198,7 +198,7 @@ trait CodeGeneration {
           }
         } else {
           Nil
-        } // : List[(APACondition, APAProgram)] 
+        } // : List[(APACondition, APAProgram)]
         case a @ APAForSplit(vs, lb, ub, cond, prog) => {
           //println("AAA : " + a)
           //println("VS : " + vs)
@@ -224,7 +224,7 @@ trait CodeGeneration {
             map = map + (iv.name -> newSym)
             newSym
           })
-          
+
           val beforeLoopAssignments: List[Tree] = List(
             ValDef(fSym, Literal(Constant(false))),
             ValDef(lbSym, apaInTermToCode(map, lb)),
@@ -261,7 +261,7 @@ trait CodeGeneration {
         }
       )
     }
-  
+
     def termToCode(map: SymbolMap, term: PATerm): Tree = term match {
       case PADivision(num, den) => {
         // num / den actually generates:
@@ -335,7 +335,7 @@ trait CodeGeneration {
     def flooredDivision(t1: Tree, t2: Tree): Tree = {
         val numSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "n")).setInfo(definitions.IntClass.tpe)
         val denSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "d")).setInfo(definitions.IntClass.tpe)
-        val numTree = Ident(numSym) 
+        val numTree = Ident(numSym)
         val denTree = Ident(denSym)
         Block(
           List(
@@ -429,7 +429,7 @@ trait CodeGeneration {
         inputAss = ntree :: inputAss
       })
       inputAss = inputAss.reverse
-      Block(inputAss, formulaToCode(map, cond.global_condition)) 
+      Block(inputAss, formulaToCode(map, cond.global_condition))
     }
 
     def apaConditionToCode(topMap: SymbolMap, cond: APACondition): Tree = {
@@ -493,13 +493,13 @@ trait CodeGeneration {
 
     def setTermToCode(map: SymbolMap, term: bapa.ASTBAPASyn.BASet, baseTypeTree: TypeTree): Tree = term match {
       case bapa.ASTBAPASyn.SetVar(name) => variable(map, name)
-      case bapa.ASTBAPASyn.EmptySet => /*TypeApply(*/Select(Select(Select(Select(Ident(scalaPack), scalaCollection), scalaCollectionImmutable), scalaCollectionImmutableSetModule), setEmpty)//, List(baseTypeTree)) 
-      case bapa.ASTBAPASyn.Union(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), nme.PLUSPLUS), List(setTermToCode(map,s2,baseTypeTree)))
+      case bapa.ASTBAPASyn.EmptySet => /*TypeApply(*/Select(Select(Select(Select(Ident(scalaPack), scalaCollection), scalaCollectionImmutable), scalaCollectionImmutableSetModule), setEmpty)//, List(baseTypeTree))
+      case bapa.ASTBAPASyn.Union(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), PLUSPLUS), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(s1, bapa.ASTBAPASyn.Compl(s2)) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("--")), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(bapa.ASTBAPASyn.Compl(s1), s2) => Apply(Select(setTermToCode(map,s2,baseTypeTree), encode("--")), List(setTermToCode(map,s1,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("**")), List(setTermToCode(map,s2,baseTypeTree)))
       case _ => {
-        //setTermToCode(map, bapa.ASTBAPASyn.EmptySet, baseTypeTree) 
+        //setTermToCode(map, bapa.ASTBAPASyn.EmptySet, baseTypeTree)
         scala.Predef.error("Don't know what to do with : " + term)
       }
     }
