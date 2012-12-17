@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+
+imports () {
+  cat <<EOM
+import synthesis.Definitions._
+val answer = choose((x: Int) => x > 41)
+EOM
+}
+
+ant dist && rlwrap /scala/inst/27/bin/scala -i <(imports) -Xplugin:synthesis-plugin.jar -classpath synthesis-plugin.jar
