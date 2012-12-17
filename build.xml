@@ -21,11 +21,11 @@
     <property name="dist.jar" value="${dist.dir}/synthesis-plugin.jar" />
     <property name="scalac.script.file" value="${base.dir}/scalac-synthesis" />
     <property name="scala.script.file" value="${base.dir}/scala-synthesis" />
-    <property name="scalac.default.params" value="-deprecation -unchecked" />
+    <property name="scalac.default.params" value="-unchecked" />
     <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/>
 
     <!-- libs -->
-    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.0.1.jar" />
+    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.2.jar" />
 
     <!-- required to use the tasks scalac, fsc and scaladoc -->
     <taskdef resource="scala/tools/ant/antlib.xml">

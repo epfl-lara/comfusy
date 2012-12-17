@@ -8,4 +8,4 @@ val answer = choose((x: Int) => x > 41)
 EOM
 }
 
-ant dist && rlwrap /scala/inst/27/bin/scala -i <(imports) -Xplugin:synthesis-plugin.jar -classpath synthesis-plugin.jar
+ant dist && rlwrap /scala/inst/28/bin/scala -i <(imports) -Xplugin:synthesis-plugin.jar -classpath synthesis-plugin.jar

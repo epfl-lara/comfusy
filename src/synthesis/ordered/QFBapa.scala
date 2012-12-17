@@ -1,4 +1,5 @@
-package synthesis.ordered
+package synthesis
+package ordered
 
 import synthesis.{Arithmetic => A};
 import synthesis.ordered._;
@@ -11,7 +12,7 @@ object QFBapa {
 object QFBAPAtoPATranslator {
   case class IllegalTerm(a: Any) extends Exception(a + " should not be present in the formula to be converted.")
 
-  private implicit def rangeToList[T](r: RandomAccessSeq.Projection[T]): List[T] = r.toList
+  private implicit def rangeToList[T](r: Traversable[T]): List[T] = r.toList
 
   def apply(f: Formula) = {
     val sVars = GuessOrdering.setvars(f).toList
@@ -58,7 +59,7 @@ object QFBAPAtoPATranslator {
     case Predicate(_, _) => form
   }
 
-  // translate BA to PA expression 
+  // translate BA to PA expression
   // Generate formula of the form
   //    (if st0 then l_k else 0)
   //  where st0 is the result of replacing, in st, the set variables with k-family
@@ -92,7 +93,7 @@ object QFBAPAtoPATranslator {
     }
     def reduceTerm(term: Term): Term = term match {
       case Op(CARD, List(set)) =>
-        Op(ADD, for (k <- 1 to n) yield ba2pa(set, k))
+        Op(ADD, for (k <- (1 to n).toList) yield ba2pa(set, k))
       case Op(c, ts) =>
         Op(c, ts map reduceTerm)
       case Lit(_) | Ident(_, _) => term
@@ -175,12 +176,12 @@ object QFBAPAtoPATranslator {
   // increasing sequence of regions
   val BREAK_SYMMETRY = false
 
-  def breakSymmetry(n: Int, svars: List[Ident]) =
+  def breakSymmetry(n: Int, svars: List[Ident]): List[Formula] =
     if (BREAK_SYMMETRY)
-      for (i <- 1 to n) yield mkIndexLess(i)(svars)
+      for (i <- (1 to n).toList) yield mkIndexLess(i)(svars)
     else Nil
 
-  def mkIndexLess(i: Int) = {
+  def mkIndexLess(i: Int): List[Ident] => Formula = {
     def rek(sets: List[Ident]): Formula = sets match {
       case Nil => True
       case s :: Nil =>
@@ -200,8 +201,7 @@ object QFBAPAtoPATranslator {
 
   // TODO
   def nonNegativeCards(n: Int) =
-    for (i <- 1 to n) yield 0 <= natVar(i)
-
+    for (i <- (1 to n).toList) yield 0 <= natVar(i)
 
   // compute the largest n such that 2^n <= (n+1)^d
   def findSparsenessBound(d: Int) = {

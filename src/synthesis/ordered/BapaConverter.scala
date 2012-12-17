@@ -1,4 +1,5 @@
-package synthesis.ordered
+package synthesis
+package ordered
 
 import synthesis.bapa.{ASTBAPASyn => BSyn}
 import synthesis.ordered.AST._

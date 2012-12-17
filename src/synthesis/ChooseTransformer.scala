@@ -6,7 +6,7 @@ import scala.collection.immutable.Set
 
 import scala.tools.nsc.transform.TypingTransformers
 
-import scala.tools.nsc.util.NoPosition
+// import scala.tools.nsc.util.NoPosition
 
 trait ChooseTransformer
   extends TypingTransformers
@@ -40,7 +40,7 @@ trait ChooseTransformer
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && predicate.vparams(0).tpt.tpe == definitions.IntClass.tpe) => {
           // SANITY CHECKS
           var foundErrors = false
-          // DEBUG reporter.info(a.pos, "here!", true) 
+          // DEBUG reporter.info(a.pos, "here!", true)
           val Function(funValDefs, funBody) = predicate
 
           // we check that we're only synthesizing integers, and collect the
@@ -97,7 +97,7 @@ trait ChooseTransformer
             isSat(completeFormula) match {
               case (Some(true), Some(ass)) => {
                 var wm = "Synthesis predicate has multiple solutions for variable assignment: "
-                wm = wm + ass.keys.filter(k => !toMap.keys.contains(k) && !fromMap.keys.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
+                wm = wm + ass.keys.filter(k => !toMap.keys.toList.contains(k) && !fromMap.keys.toList.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
                 wm = wm + "\n"
                 wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
                 wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
@@ -138,14 +138,14 @@ trait ChooseTransformer
               case Some(_) => ; // we would already have a warning.
             }
           }
-          
+
           // CODE GENERATION
           var initialMap: SymbolMap = Map.empty
           extractedSymbols.foreach(sym => {
             initialMap = initialMap + (sym.name.toString -> sym)
           })
           val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
-          val generated = codeGen.apaProgramToCode(apaPrec, apaProg, true) 
+          val generated = codeGen.apaProgramToCode(apaPrec, apaProg, true)
 
           typer.typed(atOwner(currentOwner) {
             generated
@@ -175,7 +175,7 @@ trait ChooseTransformer
                   case _ => ;
                 }
                 val frm = normalized(Equals(formula, Variable(scrutName)))
-                
+
                 val outVarSyms: List[Symbol] = outVars.toList
                 val realOutVarList: List[String] = outVarSyms.map(_.name.toString) ::: wildcards.toList
                 val realOutVarSet: Set[String] = Set.empty ++ realOutVarList
@@ -202,7 +202,7 @@ trait ChooseTransformer
                       cse.body
                     } else {
                       // we build new symbols
-                      val newOutSyms = outVarSyms.map(s => 
+                      val newOutSyms = outVarSyms.map(s =>
                         currentOwner.newValue(s.pos, unit.fresh.newName(s.pos, s.name.toString)).setInfo(definitions.IntClass.tpe)
                       )
                       //val wcSyms = wildcards.toList.map(w =>
@@ -223,10 +223,10 @@ trait ChooseTransformer
                       } else {
                         val outVarCount = outVarSyms.size
                         val tupleHolderSym = currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "t")).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
-                        
+
                         Block(
                           ValDef(tupleHolderSym, computedTuple) :: (
-                          for(val c <- 0 until outVarCount) yield 
+                          for(val c <- 0 until outVarCount) yield
                             ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1))))
                           ).toList, // :::
 //                          for(val c <- 0 until wcSyms.size) :: (
@@ -364,9 +364,9 @@ trait ChooseTransformer
               PASynthesis.PAFalse()
             }
           }
-          if (foundErrors) 
+          if (foundErrors)
             return a
-          
+
           dprintln(mikaelStyleFormula)
 
           val (paPrec,paProg) = PASynthesis.solve(linOutVars.map(PASynthesis.OutputVar(_)), mikaelStyleFormula)
@@ -444,15 +444,15 @@ trait ChooseTransformer
             }
           }).toList
 
-           
+
 
           typer.typed(atOwner(currentOwner) {
             Block(
-              preliminaryCardAssigns ::: 
+              preliminaryCardAssigns :::
               mikiProgram :::
               concludingAssigns :::
               Nil,
-              if(outSetVarList.size == 1) { 
+              if(outSetVarList.size == 1) {
                 Ident(outSetVarList(0))
               } else {
                 New(
@@ -462,7 +462,7 @@ trait ChooseTransformer
               }
             )
           })
-        } 
+        }
 
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
           /*
@@ -485,7 +485,7 @@ trait ChooseTransformer
           args(0) match {
             case TypeRef(_, ss, Nil) if ss == definitions.getClass("scala.Predef.String") => println("yes yes yes yes")
           }
-          
+
           */
           reporter.error(predicate.vparams.head.pos, "Unsupported type in call to ``choose''.")
           super.transform(a)
@@ -624,7 +624,7 @@ trait ChooseTransformer
       }
     }
 
-    def formulaToAPAFormula2(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = 
+    def formulaToAPAFormula2(formula: Formula, outVarSet: Set[String]): Option[APAFormula] =
     if(!isQuasiLinear(formula, outVarSet)) {
       None
     } else {
@@ -712,13 +712,13 @@ trait ChooseTransformer
         case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
         case Min(ts) => scala.Predef.error("Mod should not occur.")
       }).map(_.simplified)
-      
+
       try {
         Some(f2apaf(formula))
       } catch {
         case EscapeException() => scala.Predef.error("was quasi-linear or not??"); None
       }
-    } 
+    }
 
 /*    def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
       case class EscapeException() extends Exception
