@@ -11,10 +11,10 @@
     <property name="scala-library.jar" value="${scala.home}/lib/scala-library.jar" />
     <property name="scala-compiler.jar" value="${scala.home}/lib/scala-compiler.jar" />
 
-    <property name="base.dir" value="${basedir}" /> 
+    <property name="base.dir" value="${basedir}" />
     <property name="sources.dir" value="${base.dir}/src" />
     <property name="dist.dir" value="${base.dir}/dist" />
-    <property name="lib.dir" value="${basedir}/lib" /> 
+    <property name="lib.dir" value="${basedir}/lib" />
     <property name="build.dir" value="${base.dir}/bin" />
 
     <!-- other properties -->
@@ -22,10 +22,10 @@
     <property name="scalac.script.file" value="${base.dir}/scalac-synthesis" />
     <property name="scala.script.file" value="${base.dir}/scala-synthesis" />
     <property name="scalac.default.params" value="-deprecation -unchecked" />
-    <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/> 
+    <property name="scalac.synthesis.plugin" value="-Xplugin:${dist.jar} ${scalac.default.params}"/>
 
     <!-- libs -->
-    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.0.jar" />
+    <property name="scalatest.jar" value="${lib.dir}/scalatest-1.0.1.jar" />
 
     <!-- required to use the tasks scalac, fsc and scaladoc -->
     <taskdef resource="scala/tools/ant/antlib.xml">

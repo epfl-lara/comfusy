@@ -90,7 +90,7 @@ object Z3Converter {
       //println(smt)
 
       val startTime = Calendar.getInstance().getTimeInMillis();
-      val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
+      val process = java.lang.Runtime.getRuntime.exec("z3 -smt -in")
       val out = new java.io.PrintStream(process.getOutputStream)
       out.println(smt)
       out.flush
