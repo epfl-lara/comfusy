@@ -26,9 +26,9 @@ trait ChooseTransformer
       println(str.toString)
   }
 
-  private lazy val synthesisPackage: Symbol = definitions.getModule("synthesis")
-  private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
-  private lazy val immutableSetTraitSymbol = definitions.getClass("scala.collection.immutable.Set")
+  private lazy val synthesisPackage: Symbol = rootMirror.getRequiredModule("synthesis")
+  private lazy val synthesisDefinitionsModule: Symbol = rootMirror.getRequiredModule("synthesis.Definitions")
+  private lazy val immutableSetTraitSymbol = rootMirror.getRequiredClass("scala.collection.immutable.Set")
 
   /** The actual rewriting function is the following. */
   def transformChooseCalls(unit: CompilationUnit, emitWarnings: Boolean): Unit =
@@ -45,7 +45,7 @@ trait ChooseTransformer
 
           // we check that we're only synthesizing integers, and collect the
           // set of input variables
-          // for (val valDef <- funValDefs) {
+          // for (valDef <- funValDefs) {
           //   if(valDef.tpt.tpe != definitions.IntClass.tpe) {
           //     reporter.error(valDef.pos, "unsupported type in call to synthesizer: " + valDef.tpt.tpe)
           //     foundErrors = true
@@ -226,10 +226,10 @@ trait ChooseTransformer
 
                         Block(
                           ValDef(tupleHolderSym, computedTuple) :: (
-                          for(val c <- 0 until outVarCount) yield
+                          for(c <- 0 until outVarCount) yield
                             ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1))))
                           ).toList, // :::
-//                          for(val c <- 0 until wcSyms.size) :: (
+//                          for(c <- 0 until wcSyms.size) :: (
 //                            ValDef(wcSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1+outVarCount))))
 //                          ).toList,
                           symSubst(cse.body)
@@ -279,7 +279,7 @@ trait ChooseTransformer
 
             // checks for reachability
             var foundUnreachable = false
-            for(val c <- 0 until patternConditionPairs.size - 1) {
+            for(c <- 0 until patternConditionPairs.size - 1) {
               if(!foundUnreachable) {
                 val theOne = patternConditionPairs(c+1)
                 val reachForm = And(Not(Or(patternConditionPairs.take(c + 1).map(_._2))), theOne._2)
@@ -421,12 +421,12 @@ trait ChooseTransformer
             } else {
               val tempTupleSym = currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
               ValDef(tempTupleSym, mikiFun) :: (
-                for(val c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
+                for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
             }
           }
 
           outSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
-          val concludingAssigns: List[Tree] = (for(val ass <- asss) yield {
+          val concludingAssigns: List[Tree] = (for(ass <- asss) yield {
             if(!symbolMap.isDefinedAt(ass.setName)) {
               symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, ass.setName + "$")).setInfo(instantiatedSetType))
             }
@@ -435,7 +435,7 @@ trait ChooseTransformer
               case bapa.ASTBAPASyn.Take(nme, cnt, setExpr) => {
                 ValDef(symbolMap(nme),
                   Apply(
-                    Select(Select(Ident(synthesisPackage), synthesisDefinitionsModule), definitions.getMember(synthesisDefinitionsModule, "takeFromSet")),
+                    Select(Select(Ident(synthesisPackage), synthesisDefinitionsModule), definitions.termMember(synthesisDefinitionsModule, "takeFromSet")),
                     List(codeGen.setIntTermToCode(symbolMap, cnt, underlyingElementTypeTree), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
                   )
                 )

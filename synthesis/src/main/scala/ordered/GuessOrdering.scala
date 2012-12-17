@@ -28,10 +28,10 @@ object GuessOrdering {
       case _ => empty
     }
     vars _
-    //    (f: Formula) => vars(f).toList sort (_.name < _.name)
+    //    (f: Formula) => vars(f).toList sortWith (_.name < _.name)
   }
 
-  private def set2list(set: Set[Ident]) = set.toList sort (_.name.name < _.name.name)
+  private def set2list(set: Set[Ident]) = set.toList sortWith (_.name.name < _.name.name)
 
   private def findInf(f: Formula): List[(SetVar, IntVar)] = f match {
     case Predicate(EQ, List(term@Ident(IntType, _), Op(INF, List(set@Ident(SetType, _))))) =>

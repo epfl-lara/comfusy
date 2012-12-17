@@ -10,7 +10,7 @@ object AST {
   //  type NonLogical = Primitives.NonLogical
 
 
-  implicit def sym2term(s: Symbol): Ident = Ident(if (s.name(0).isUpperCase) SetType else IntType, s)
+  implicit def sym2term(s: Symbol): Ident = Ident(if (s.name(0).isUpper) SetType else IntType, s)
 
   implicit def int2term(i: Int): Term = Lit(IntLit(i))
 
@@ -145,10 +145,10 @@ object AST {
 /*
 object AST1 extends AST {
   import Primitives.{IntLogical, negate}
-  
+
   type Name = Symbol
   type Logical = Primitives.Logical
   type NonLogical = Primitives.NonLogical
-  
+
 
 }*/

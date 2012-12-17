@@ -287,7 +287,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         needsLessOperations(min_coefs_o1, min_coefs_o2)
     }
 
-    val sorted_equalities = interesting_equalities sort by_least_outputvar_coef
+    val sorted_equalities = interesting_equalities sortWith by_least_outputvar_coef
 
     sorted_equalities match {
       case Nil =>

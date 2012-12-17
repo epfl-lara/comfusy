@@ -10,46 +10,46 @@ trait CodeGeneration {
 
   type SymbolMap = Map[String,Symbol]
 
-  private lazy val scalaPack: Symbol = definitions.ScalaPackage
-  private lazy val scalaMath: Symbol = definitions.getModule("scala.Math")
-  private lazy val scalaMathMin: Symbol = definitions.getMember(scalaMath, "min")
-  private lazy val scalaMathMax: Symbol = definitions.getMember(scalaMath, "max")
-  private lazy val scalaMathAbs: Symbol = definitions.getMember(scalaMath, "abs")
-  private lazy val scalaCollection: Symbol = definitions.getModule("scala.collection")
-  private lazy val scalaCollectionImmutable: Symbol = definitions.getModule("scala.collection.immutable")
-  private lazy val scalaCollectionImmutableSetModule: Symbol = definitions.getModule("scala.collection.immutable.Set")
-  private lazy val setEmpty: Symbol = definitions.getMember(scalaCollectionImmutableSetModule, "empty")
-  private lazy val unsatConstraintsException: Symbol = definitions.getClass("synthesis.Definitions.UnsatisfiableConstraint")
-  private val throwTree = Throw(New(Ident(unsatConstraintsException), List(Nil)))
-  private lazy val matrixIteratorClass: Symbol = definitions.getClass("synthesis.Common.MatrixIterator")
-  private lazy val matrixIteratorClassNext: Symbol = definitions.getMember(matrixIteratorClass, "next")
-  private lazy val synthesisPack: Symbol = definitions.getModule("synthesis")
-  private lazy val synthesisCommon: Symbol = definitions.getModule("synthesis.Common")
-  private lazy val bezoutFunction: Symbol = definitions.getMember(synthesisCommon, "bezoutWithBaseMM")
-  private lazy val gcdFunction: Symbol = definitions.getMember(synthesisCommon, "gcdlist")
-  private lazy val lcmFunction: Symbol = definitions.getMember(synthesisCommon, "lcmlist")
+  private lazy val scalaPack: Symbol                         = definitions.ScalaPackage
+  private lazy val scalaMath: Symbol                         = rootMirror.getRequiredModule("scala.math.package")
+  private lazy val scalaMathMin: Symbol                      = definitions.termMember(scalaMath, "min")
+  private lazy val scalaMathMax: Symbol                      = definitions.termMember(scalaMath, "max")
+  private lazy val scalaMathAbs: Symbol                      = definitions.termMember(scalaMath, "abs")
+  private lazy val scalaCollection: Symbol                   = rootMirror.getRequiredModule("scala.collection")
+  private lazy val scalaCollectionImmutable: Symbol          = rootMirror.getRequiredModule("scala.collection.immutable")
+  private lazy val scalaCollectionImmutableSetModule: Symbol = rootMirror.getRequiredModule("scala.collection.immutable.Set")
+  private lazy val setEmpty: Symbol                          = definitions.termMember(scalaCollectionImmutableSetModule, "empty")
+  private lazy val unsatConstraintsException: Symbol         = rootMirror.getRequiredClass("synthesis.Definitions.UnsatisfiableConstraint")
+  private val throwTree                                      = Throw(New(Ident(unsatConstraintsException), List(Nil)))
+  private lazy val matrixIteratorClass: Symbol               = rootMirror.getRequiredClass("synthesis.Common.MatrixIterator")
+  private lazy val matrixIteratorClassNext: Symbol           = definitions.termMember(matrixIteratorClass, "next")
+  private lazy val synthesisPack: Symbol                     = rootMirror.getRequiredModule("synthesis")
+  private lazy val synthesisCommon: Symbol                   = rootMirror.getRequiredModule("synthesis.Common")
+  private lazy val bezoutFunction: Symbol                    = definitions.termMember(synthesisCommon, "bezoutWithBaseMM")
+  private lazy val gcdFunction: Symbol                       = definitions.termMember(synthesisCommon, "gcdlist")
+  private lazy val lcmFunction: Symbol                       = definitions.termMember(synthesisCommon, "lcmlist")
 
   class CodeGenerator(val unit: CompilationUnit, val owner: Symbol, val initialMap: SymbolMap, val emitWarnings: Boolean, val pos: Position) {
     import scala.tools.nsc.util.NoPosition
 
     // defines a new variable and returns a new symbol map with it
     private def assign(map: SymbolMap, varNme: String, expr: PATerm): (SymbolMap,Tree) = {
-      val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "s")).setInfo(definitions.IntClass.tpe)
+      val newSym = owner.newValue(unit.fresh.newName("s")).setInfo(definitions.IntClass.tpe)
       (map + (varNme -> newSym), ValDef(newSym, termToCode(map, expr)))
     }
 
     private def apaAssign(map: SymbolMap, varNme: String, expr: APATerm): (SymbolMap,Tree) = {
-      val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "s")).setInfo(definitions.IntClass.tpe)
+      val newSym = owner.newValue(unit.fresh.newName("s")).setInfo(definitions.IntClass.tpe)
       (map + (varNme -> newSym), ValDef(newSym, apaTermToCode(map, expr)))
     }
 
     private def apaInputAssign(map: SymbolMap, expr: /*APA*/InputAssignment): (SymbolMap,List[Tree]) = expr match {
       case SingleInputAssignment(inVar, inTerm) => {
-        val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "t")).setInfo(definitions.IntClass.tpe)
+        val newSym = owner.newValue(unit.fresh.newName("t")).setInfo(definitions.IntClass.tpe)
         (map + (inVar.name -> newSym), List(ValDef(newSym, apaInTermToCode(map, inTerm))))
       }
       case BezoutInputAssignment(vss, ts) => {
-        val matrixSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "m")).setInfo(matrixIteratorClass.tpe)
+        val matrixSym = owner.newValue(unit.fresh.newName("m")).setInfo(matrixIteratorClass.tpe)
         var newMap: SymbolMap = map
         var trees: List[Tree] = Nil
 
@@ -57,7 +57,7 @@ trait CodeGeneration {
         trees = trees ::: (ValDef(matrixSym, New(Ident(matrixIteratorClass), List(List( Apply(Select(Select(Ident(synthesisPack), synthesisCommon), bezoutFunction), List(Literal(Constant(1)), Apply(Ident(definitions.ListModule), ts.map(apaInTermToCode(map, _))))))))) :: Nil)
 
         (vss.flatten:List[synthesis.InputVar]).foreach((v:synthesis.InputVar) => {
-          val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "t")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newValue(unit.fresh.newName("t")).setInfo(definitions.IntClass.tpe)
           newMap = newMap + (v.name -> newSym)
           trees = trees ::: (ValDef(newSym, Select(Ident(matrixSym), matrixIteratorClassNext.name)) :: Nil)
         })
@@ -107,7 +107,7 @@ trait CodeGeneration {
         val valCount = valNames.size
         // ...prepare a symbol for each of them.
         valNames.foreach(vn => {
-          val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "csOut")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newValue(unit.fresh.newName("csOut")).setInfo(definitions.IntClass.tpe)
           map = map + (vn -> newSym)
         })
 
@@ -119,9 +119,9 @@ trait CodeGeneration {
         if (valCount == 1) {
           List(ValDef(map(valNames.head), bigIteExpr))
         } else {
-          val tempTupleSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+          val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
           ValDef(tempTupleSym, bigIteExpr) :: (
-            for(val c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
+            for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
           ).toList
         }
       } else {
@@ -180,7 +180,7 @@ trait CodeGeneration {
           val valNames = programs(0)._2.output_variables.map(ov => ov.name)
           val valCount = valNames.size
           valNames.foreach(vn => {
-            val newSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "y")).setInfo(definitions.IntClass.tpe)
+            val newSym = owner.newValue(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
             map = map + (vn -> newSym)
           })
 
@@ -191,9 +191,9 @@ trait CodeGeneration {
           if (valCount == 1) {
             List(ValDef(map(valNames.head), iteExpr))
           } else {
-            val tempTupleSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+            val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
             ValDef(tempTupleSym, iteExpr) :: (
-              for(val c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
+              for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
             ).toList
           }
         } else {
@@ -211,16 +211,16 @@ trait CodeGeneration {
           val valCount = valNames.size
           // note that these are mutable.
           val valSyms: List[Symbol] = valNames.map(vn => {
-            val newSym = owner.newVariable(NoPosition, unit.fresh.newName(NoPosition, "y")).setInfo(definitions.IntClass.tpe)
+            val newSym = owner.newVariable(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
             map = map + (vn -> newSym)
             newSym
           })
 
-          val fSym = owner.newVariable(NoPosition, unit.fresh.newName(NoPosition, "f")).setInfo(definitions.BooleanClass.tpe)
-          val lbSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "lb")).setInfo(definitions.IntClass.tpe)
-          val ubSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "ub")).setInfo(definitions.IntClass.tpe)
+          val fSym = owner.newVariable(unit.fresh.newName("f")).setInfo(definitions.BooleanClass.tpe)
+          val lbSym = owner.newValue(unit.fresh.newName("lb")).setInfo(definitions.IntClass.tpe)
+          val ubSym = owner.newValue(unit.fresh.newName("ub")).setInfo(definitions.IntClass.tpe)
           val counterSyms = vs.map(iv => {
-          val newSym = owner.newVariable(NoPosition, unit.fresh.newName(NoPosition, "y")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newVariable(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
             map = map + (iv.name -> newSym)
             newSym
           })
@@ -333,8 +333,8 @@ trait CodeGeneration {
     }
 
     def flooredDivision(t1: Tree, t2: Tree): Tree = {
-        val numSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "n")).setInfo(definitions.IntClass.tpe)
-        val denSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "d")).setInfo(definitions.IntClass.tpe)
+        val numSym = owner.newValue(unit.fresh.newName("n")).setInfo(definitions.IntClass.tpe)
+        val denSym = owner.newValue(unit.fresh.newName("d")).setInfo(definitions.IntClass.tpe)
         val numTree = Ident(numSym)
         val denTree = Ident(denSym)
         Block(
@@ -446,11 +446,11 @@ trait CodeGeneration {
     def apaSplitConditionToCode(topMap: SymbolMap, splitCond: APASplitCondition): Tree = splitCond match {
       case APAForCondition(vs, lb, ub, cond) => {
         var newMap: SymbolMap = topMap
-        val fSym = owner.newVariable(NoPosition, unit.fresh.newName(NoPosition, "f")).setInfo(definitions.BooleanClass.tpe)
-        val lbSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "lb")).setInfo(definitions.IntClass.tpe)
-        val ubSym = owner.newValue(NoPosition, unit.fresh.newName(NoPosition, "ub")).setInfo(definitions.IntClass.tpe)
+        val fSym = owner.newVariable(unit.fresh.newName("f")).setInfo(definitions.BooleanClass.tpe)
+        val lbSym = owner.newValue(unit.fresh.newName("lb")).setInfo(definitions.IntClass.tpe)
+        val ubSym = owner.newValue(unit.fresh.newName("ub")).setInfo(definitions.IntClass.tpe)
         val counterSyms: List[Symbol] = vs.map((v:synthesis.InputVar) => {
-          val newSym = owner.newVariable(NoPosition, unit.fresh.newName(NoPosition, "i")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newVariable(unit.fresh.newName("i")).setInfo(definitions.IntClass.tpe)
           newMap = newMap + (v.name -> newSym)
           newSym
         })
@@ -485,7 +485,7 @@ trait CodeGeneration {
 
     // builds a for loop which increments the counter while condTree holds
     def makeForLoop(counter: Symbol, condTree: Tree, body: Tree): Tree = {
-      val label = owner.newLabel(NoPosition, unit.fresh.newName(NoPosition, "forloop$")).setInfo(MethodType(Nil, definitions.UnitClass.tpe))
+      val label = owner.newLabel(unit.fresh.newName("forloop$")).setInfo(MethodType(Nil, definitions.UnitClass.tpe))
       val continu = Apply(Ident(label), Nil)
       val rhs = If(condTree, Block(body :: Assign(Ident(counter), Apply(Select(Ident(counter), nme.ADD), List(Literal(Constant(1))))) :: Nil, continu), EmptyTree)
       LabelDef(label, Nil, rhs)
@@ -497,7 +497,7 @@ trait CodeGeneration {
       case bapa.ASTBAPASyn.Union(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), PLUSPLUS), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(s1, bapa.ASTBAPASyn.Compl(s2)) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("--")), List(setTermToCode(map,s2,baseTypeTree)))
       case bapa.ASTBAPASyn.Intersec(bapa.ASTBAPASyn.Compl(s1), s2) => Apply(Select(setTermToCode(map,s2,baseTypeTree), encode("--")), List(setTermToCode(map,s1,baseTypeTree)))
-      case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("**")), List(setTermToCode(map,s2,baseTypeTree)))
+      case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("&")), List(setTermToCode(map,s2,baseTypeTree)))
       case _ => {
         //setTermToCode(map, bapa.ASTBAPASyn.EmptySet, baseTypeTree)
         scala.Predef.error("Don't know what to do with : " + term)

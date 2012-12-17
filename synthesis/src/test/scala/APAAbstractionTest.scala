@@ -3,7 +3,7 @@ package synthesis
 import org.scalatest._
 import org.scalatest.matchers._
 
-class APAAbstractionTest extends Spec with ShouldMatchers {
+class APAAbstractionTest extends FunSpec with ShouldMatchers {
   def O(name: String) = OutputVar(name)
   def I(name: String) = InputVar(name)
   implicit def OutputVarToPACombination(o: OutputVar):APACombination = APACombination(o)
@@ -21,7 +21,7 @@ class APAAbstractionTest extends Spec with ShouldMatchers {
   val x0 = I("x0")
   val c = I("c")
   val d = I("d")
-  
+
   describe("Sign Abstraction") {
     it("should help to simplify expressions") {
       val bP   = (b.assumePositiveZero() - c.assumeSign(-1)) // > 0
@@ -38,40 +38,40 @@ class APAAbstractionTest extends Spec with ShouldMatchers {
       val bFalse2 = (b.assumeSign(1).propagateSign(0).toInputTerm())
       val bFalse3 = (b.assumeSign(0).propagateSign(-1).toInputTerm())
       val bFalse4 = (b.assumeSign(1).propagateSign(-1).toInputTerm())
-      
-      (bP::bP2::Nil) foreach { case k:APAInputTerm => 
+
+      (bP::bP2::Nil) foreach { case k:APAInputTerm =>
         (k > 0) should equal (APATrue())
         (k >= 0) should equal (APATrue())
         (k === 0) should equal (APAFalse())
         (k <= 0) should equal (APAFalse())
         (k < 0) should equal (APAFalse())
       }
-      List(bN, bN2) foreach { case k:APAInputTerm => 
+      List(bN, bN2) foreach { case k:APAInputTerm =>
         (k > 0) should equal (APAFalse())
         (k >= 0) should equal (APAFalse())
         (k === 0) should equal (APAFalse())
         (k <= 0) should equal (APATrue())
         (k < 0) should equal (APATrue())
       }
-      List(bPZ, bPZ2) foreach { case k:APAInputTerm => 
+      List(bPZ, bPZ2) foreach { case k:APAInputTerm =>
         (k >= 0) should equal (APATrue())
         (k < 0) should equal (APAFalse())
       }
-      List(bNZ, bNZ2) foreach { case k:APAInputTerm => 
+      List(bNZ, bNZ2) foreach { case k:APAInputTerm =>
         (k <= 0) should equal (APATrue())
         (k > 0) should equal (APAFalse())
       }
-      List(bPN) foreach { case k:APAInputTerm => 
+      List(bPN) foreach { case k:APAInputTerm =>
         (k === 0) should equal (APAFalse())
       }
-      List(bZ) foreach { case k:APAInputTerm => 
+      List(bZ) foreach { case k:APAInputTerm =>
         (k > 0) should equal (APAFalse())
         (k >= 0) should equal (APATrue())
         (k === 0) should equal (APATrue())
         (k <= 0) should equal (APATrue())
         (k < 0) should equal (APAFalse())
       }
-      List(bFalse1, bFalse2, bFalse3, bFalse4) foreach { case k:APAInputTerm => 
+      List(bFalse1, bFalse2, bFalse3, bFalse4) foreach { case k:APAInputTerm =>
         (k > 0) should equal (APAFalse())
         val eq = (k >= 0)
         eq should equal (APAFalse())
@@ -96,7 +96,7 @@ class APAAbstractionTest extends Spec with ShouldMatchers {
       val u1 = (b*c).assumeNotZero()
       val u2 = (b*c).assumePositive()
       val u3 = (b*c).assumeNegative()
-      List(u1, u2, u3) foreach { u => 
+      List(u1, u2, u3) foreach { u =>
         u match {
           case APAInputMultiplication(List(b, c)) =>
             b should be ('NotZero)

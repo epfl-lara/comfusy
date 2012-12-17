@@ -3,7 +3,7 @@ package synthesis
 import org.scalatest._
 import org.scalatest.matchers._
 
-class APASyntaxTreeTest extends Spec with ShouldMatchers {
+class APASyntaxTreeTest extends FunSpec with ShouldMatchers {
   def O(name: String) = OutputVar(name)
   def I(name: String) = InputVar(name)
   implicit def OutputVarToPACombination(o: OutputVar):APACombination = APACombination(o)
@@ -16,7 +16,7 @@ class APASyntaxTreeTest extends Spec with ShouldMatchers {
   val y = O("y")
   val y1 = O("y1")
   val z = O("z")
-  
+
   val b = I("b")
   val x0 = I("x0")
   val c = I("c")

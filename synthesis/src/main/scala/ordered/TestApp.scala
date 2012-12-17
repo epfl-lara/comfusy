@@ -84,8 +84,9 @@ object TestApp {
         //        println
         true
       } else false
-    } catch {
-      case e => println(e); false //e.printStackTrace(); false
     }
+    // catch {
+    //   case e => println(e); false //e.printStackTrace(); false
+    // }
   }
 }

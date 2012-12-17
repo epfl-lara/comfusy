@@ -2,25 +2,25 @@ package synthesis
 
 
 /** Object providing methods to deal with generated programs.
- * 
+ *
  *  @author Mikaël Mayer
  */
 object APAAbstractProgram {
-  
+
   /** Converts a map of (input variable, integer) to its corresponding input assignment list. */
   def toAPAInputAssignment(imap : Map[InputVar, Int]):List[(InputVar, APAInputCombination)] =
     imap.toList map {case (v, i) => (v, APAInputCombination(i, Nil))}
-  
+
   /** Converts a map of (output variable, integer) to its corresponding output assignment list. */
   def toAPAOutputAssignment(imap : Map[OutputVar, Int]):List[(OutputVar, APACombination)] =
     imap.toList map {case (v, i) => (v, APACombination(APAInputCombination(i, Nil), Nil))}
-  
+
   /** Returns the combination of the two sentences, adding a "\n" if needed */
   def combineSentences(s1: String, s2: String):String = (if(s1.endsWith("\n") || s1 == "") s1 else s1 + "\n") + s2
 
   /** Returns a list of useful consistent input and output assignments,
    *  given existing assignments and needs.
-   *  
+   *
    *  @param input_assignments The input assignments of the program.
    *  @param output_assignment The output assignments of the program.
    *  @param assignments_to_propagate_input A list of simple input assignments which can be propagated at anytime.
@@ -35,7 +35,7 @@ object APAAbstractProgram {
       assignments_to_propagate_output : List[(OutputVar, APACombination)],
       interesting_input_variables : List[InputVar], //Variables appearing in a split for example.
       interesting_output_variables : List[OutputVar])
-        : (List[InputAssignment], List[(OutputVar, APATerm)]) = 
+        : (List[InputAssignment], List[(OutputVar, APATerm)]) =
     recursive_propagation_delete_temp(input_assignments,
                                       output_assignments,
                                       assignments_to_propagate_input,
@@ -45,7 +45,7 @@ object APAAbstractProgram {
   /** Tail-recursive version of <code>propagation_delete_temp</code>
    *  Returns a list of useful consistent input and output assignments,
    *  given existing assignments and needs.
-   *  
+   *
    *  @param input_assignments The input assignments of the program.
    *  @param output_assignment The output assignments of the program.
    *  @param assignments_to_propagate_input A list of simple input assignments which can be propagated at anytime.
@@ -68,10 +68,10 @@ object APAAbstractProgram {
         : (List[InputAssignment], List[(OutputVar, APATerm)]) = {
       // First: input assignments and then output assignments
       input_assignments match {
-        case Nil => 
+        case Nil =>
           output_assignments match {
             case Nil => (input_assignments_new.reverse, output_assignments_new.reverse)
-            case (v, pac@APACombination(_, _))::q => 
+            case (v, pac@APACombination(_, _))::q =>
               pac.replaceListInput(assignments_to_propagate_input).replaceList(assignments_to_propagate_output) match {
               case t@APACombination(_, _) =>
                 if(interesting_output_variables contains v) { // yes ! let's keep this variable
@@ -128,7 +128,7 @@ object APAAbstractProgram {
         case assignment::q =>
           assignment.replaceList(assignments_to_propagate_input) match {
             case Nil => throw new Error("In theory it cannot come up to this point")
-            case new_assignment::Nil => 
+            case new_assignment::Nil =>
               recursive_propagation_delete_temp(q, output_assignments,
                                             assignments_to_propagate_input,
                                             assignments_to_propagate_output,
@@ -146,21 +146,21 @@ object APAAbstractProgram {
                                             output_assignments_new)
           }
       }
-      
+
     }
 }
 
 /** Abstract class representing program common properties.
  */
 sealed abstract class APAAbstractProgram {
-  
+
   /** Converts this program to a string which can be visualized.*/
   def toCommonString(indent: String): String
-  
+
   /** Executes the program under the provided environment.
    * Returns a list of integer mappings. */
   def execute(l: Map[InputVar, Int]): Map[OutputVar, Int]
-  
+
   /** Returns the list of input variables needed by the program. */
   def input_variables: List[InputVar]
 }
@@ -173,7 +173,7 @@ sealed abstract class APAAbstractProgram {
 abstract class APASplit extends APAAbstractProgram
 
 /** Program equivalent to assert(false)
- *  A program containing an <code>APAFalseSplit</code> has a false precondition. */ 
+ *  A program containing an <code>APAFalseSplit</code> has a false precondition. */
 case class APAFalseSplit() extends APASplit {
   def toCommonString(indent: String) = ""
   def execute(l: Map[InputVar, Int]) = Map[OutputVar, Int]()
@@ -189,7 +189,7 @@ case class APAEmptySplit() extends APASplit {
 
 /** Object providing several methods used by the class <code>APACaseSplit</code>  */
 object APACaseSplit {
-  
+
   /** Returns a string containing the variable definition.
    *  For Scala, it corresponds to "val (x, y, z) = " */
   def variable_define(indent: String, tuple_variables: String):String = {
@@ -200,7 +200,7 @@ object APACaseSplit {
         indent + "val "+ tuple_variables +" = "
     }
   }
-  
+
   /** Returns an optimized version of a given case split. */
   def optimized(programs: List[(APACondition, APAProgram)]): APACaseSplit = {
     val new_programs = programs remove {
@@ -221,28 +221,28 @@ object APACaseSplit {
 }
 
 /** Program used to represent a disjunction of programs under their conditions.
- * 
+ *
  *  if(condition1) program1
  *  else if(condition2) program2
  *  else if...
  *  else throw new Exception("No solution")
  */
 case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APASplit {
-  
+
   /** Returns a list containing the input variables presents in all sub-programs. */
   def input_variables = (programs flatMap (_._2.input_variables)).removeDuplicates
-  
+
   /** Returns an indented string describing the program. */
   override def toString = toCommonString("  ")
-  
-  /** Returns the program equivalent to this case split. */ 
+
+  /** Returns the program equivalent to this case split. */
   def toProgram: APAProgram = programs match {
     case Nil => APAProgram.empty
     case (c, p)::Nil => p
     case (c, p)::q =>
       APAProgram(p.input_variables, Nil, this, Nil, p.output_variables)
   }
-  
+
   /** Returns a string representing this case split in the language provided in <code>APASynthesis.rendering_mode</code>. */
   def toCommonString(indent: String) = {
     APASynthesis.rendering_mode match {
@@ -250,7 +250,7 @@ case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APAS
       case RenderingPython() => toPythonString(indent)
     }
   }
-  
+
   /** Returns a string representing this case split in python.
    * APASynthesis.rendering_mode should have been set to RenderingPython(). */
   def toPythonString(indent: String) = {
@@ -296,7 +296,7 @@ case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APAS
         })++(("{ "+error_result+" }")::Nil)).reduceLeft( _ + " else " + _)
     })
   }
-  
+
   /** Executes this case split under the provided environment. */
   def execute(l: Map[InputVar, Int]): Map[OutputVar, Int] = {
     programs foreach {
@@ -309,7 +309,7 @@ case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APAS
 
 /** Program used to represent a pair (condition, program) which should execute the program whose condition is true for
  *  a particular value of the input variables.
- * 
+ *
  *  for((v1, ..., vL) in [lower_range, upper_range]^L) {
  *    if(condition) {
  *      program
@@ -323,13 +323,13 @@ case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APAS
  *  @param program   The program to execute if the condition is ok.
  */
 case class APAForSplit(vl: List[InputVar], lower_range: APAInputTerm, upper_range: APAInputTerm, condition: APACondition, program: APAProgram) extends APASplit {
-  
+
   /** Converts this program to an indented string. */
   override def toString = toCommonString("  ")
-  
+
   /** Returns a list of the input variables contained in the program, without the bound variables in the for loop. */
   def input_variables = (program.input_variables) -- vl
-  
+
   /** Returns an string containing the program, depending on the rendering mode <code>APASynthesis.rendering_mode</code>. */
   def toCommonString(indent: String) = {
     APASynthesis.rendering_mode match {
@@ -337,19 +337,19 @@ case class APAForSplit(vl: List[InputVar], lower_range: APAInputTerm, upper_rang
       case RenderingPython() => toPythonString(indent)
     }
   }
-  
+
   /** Converts the bound variables to a tuple string. */
   def varsToString(vl : List[InputVar]) : String = vl match {
     case Nil => ""
     case (v::Nil) => v.name
-    case (v::q) => "("+v.name+","+varsToString(q)+")" 
+    case (v::q) => "("+v.name+","+varsToString(q)+")"
   }
-  
+
   /** Returns a string containing the program in python.
    *  <code>APASynthesis.rendering_mode</code> should be set to RenderingPython(). */
   def toPythonString(indent: String) = {
     val condition_variable = "_condition_"
-    
+
     val indent2 = indent + "  "
     val basic_range = "xrange("+lower_range+", 1 + "+upper_range+")"
     val vs = vl match {
@@ -372,7 +372,7 @@ case class APAForSplit(vl: List[InputVar], lower_range: APAInputTerm, upper_rang
    *  <code>APASynthesis.rendering_mode</code> should be set to RenderingScala(). */
   def toScalaString(indent: String) = {
     val indent2 = indent + "  "
-    val basic_range = "(("+lower_range+") to ("+upper_range+"))" 
+    val basic_range = "(("+lower_range+") to ("+upper_range+"))"
     var ranges = basic_range
     vl.tail foreach {k =>
       ranges = ranges + " flatMap { t => "+basic_range+" map { i => (i, t) } } "
@@ -388,7 +388,7 @@ case class APAForSplit(vl: List[InputVar], lower_range: APAInputTerm, upper_rang
     val end_string = indent2+"case None => "+error_result+"\n"+indent+"}"
     (find_string::cond_string::match_string::case_string::prog_string::result_string::end_string::Nil).reduceLeft(APAAbstractProgram.combineSentences(_, _))
   }
-  
+
   /** Returns the result of this program under the provided environment. */
   def execute(l: Map[InputVar, Int]): Map[OutputVar, Int] = {
     val lr:Int = lower_range.replaceList(APAAbstractProgram.toAPAInputAssignment(l)) match {
@@ -403,29 +403,29 @@ case class APAForSplit(vl: List[InputVar], lower_range: APAInputTerm, upper_rang
     def possible_assignments(vl: List[InputVar], i: Int, current_assignment: List[(InputVar, Int)]) : Stream[List[(InputVar, Int)]] = vl match {
       case Nil => Stream(current_assignment)
       case (v::q) if i > ur => Stream()
-      case (v::q) => possible_assignments(q, lr, (v, i)::current_assignment) append possible_assignments(vl, i+1, current_assignment) 
-    } 
+      case (v::q) => possible_assignments(q, lr, (v, i)::current_assignment) append possible_assignments(vl, i+1, current_assignment)
+    }
     val assignments = possible_assignments(vl, lr, Nil)
-    
+
     assignments find { assignments =>
       condition.execute(l ++ assignments)
     } match {
       case Some(assignments) =>
         program.execute(l ++ assignments)
       case None => //throw new Error("Could not find a satisfying "+vl+" in ["+lower_range+","+upper_range+"] for "+condition.toScalaString)
-        program.execute(l ++ (vl map { case v => (v -> 0)})) 
+        program.execute(l ++ (vl map { case v => (v -> 0)}))
     }
   }
 }
 
 /** Object providing methods to deal with program optimizations. */
 object APAProgram {
-  
+
   /** The empty program. */
   def empty:APAProgram = APAProgram(Nil, Nil, APAEmptySplit(), Nil, Nil)
-  
+
   /** Returns an optimized version of the program described by these arguments.
-   *  
+   *
    *  @param input_variables The input variables this program needs to run.
    *  @param input_assignment The input assignments defining new input variables this program needs to run.
    *  @param case_splits An eventual split among conditions.
@@ -443,9 +443,9 @@ object APAProgram {
     val (reduced_input_assignments, reduced_output_assignments) = APAAbstractProgram.propagation_delete_temp(input_assignment, output_assignment, Nil, Nil, interesting_input_variables, output_variables)
     APAProgram(input_variables, reduced_input_assignments, case_splits, reduced_output_assignments, output_variables)
   }
-  
+
   /** Merges several conditions/programs together, which the help of case splits if needed.
-   * 
+   *
    *  @param input_variables The general list of input variables all these programs need.
    *  @param output_variables The general list of output variables all these programs need.
    *  @param programs_conditions A list of pairs (conditions, programs) which needs to be merged.
@@ -461,7 +461,7 @@ object APAProgram {
         programs_conditions_filtered match {
           case Nil => (APACondition.False, APAProgram.empty)
           case a::Nil => a
-          case _ => 
+          case _ =>
             val splitted_conditions:List[APACondition] = programs_conditions_filtered map (_._1)
             val splitted_formulas:List[APAFormula] = splitted_conditions map (_.global_condition)
             val final_precondition = APACaseSplitCondition(splitted_conditions).toCondition
@@ -470,7 +470,7 @@ object APAProgram {
         }
     }
   }
-  
+
   /** Returns a string representing the given output assignment. */
   def outputAssignmentToString(variable: OutputVar, value: APATerm):String = {
     APASynthesis.rendering_mode match {
@@ -482,14 +482,14 @@ object APAProgram {
 
 /** Class representing the top-level program
  *  Contains the a definition of the needed input variables and required output variables.
- * 
+ *
  *  def progname(A: Int, ... input variables) {
  *    input assignments   val k = ...
  *    case splits         if ... else ...
  *    output assignments  val x = ... a ...
  *    (output variables)  (x, ...)
  *  }
- * 
+ *
  *  @param input_variables The input variables this program needs to run.
  *  @param input_assignment The input assignments defining new input variables this program needs to run.
  *  @param case_splits An eventual split among conditions.
@@ -502,20 +502,20 @@ case class APAProgram(input_variables: List[InputVar],
                       output_assignment: List[(OutputVar, APATerm)],
                       output_variables: List[OutputVar]) extends APAAbstractProgram {
   var name="result"
-  
+
   /** Changes the name of this program
-   *  Used when the program is rendered as a named function. */ 
+   *  Used when the program is rendered as a named function. */
   def setName(new_name: String) = name = new_name
-  
+
   /** Returns a string representing this program. */
   override def toString = toCommonString("  ")
-  
+
   /** Returns a string representing this program, depending on the rendering mode <code>APASynthesis.rendering_mode</code>. */
   def toCommonString(indent: String):String = APASynthesis.rendering_mode match {
     case RenderingScala() => toScalaString(indent)
     case RenderingPython() => toPythonString(indent)
   }
-  
+
   /** Returns a string representing the content of the function described by this program.
    *  Namely, the input assignments, the case split and the output assignments. */
   def innerCommonContent(indent:String):String = {
@@ -529,17 +529,17 @@ case class APAProgram(input_variables: List[InputVar],
     }
     (prog_input::prog_case_split::prog_output::Nil).reduceLeft(APAAbstractProgram.combineSentences(_, _))
   }
-  
+
   /** Returns a string representing the result of the function described by this program,
-   *  like "(x, y, z)" where x, y, z are the output variables of this program. */ 
+   *  like "(x, y, z)" where x, y, z are the output variables of this program. */
   def resultCommonContent(indent:String):String = {
     indent+(output_variables match {
       case Nil => "()"
       case (a::Nil) => a.name
-      case l => "(" + (l map (_.name) sort {_ < _} reduceLeft (_+", "+_)) + ")"
+      case l => "(" + (l map (_.name) sortWith {_ < _} reduceLeft (_+", "+_)) + ")"
     })
   }
-  
+
   /** Returns a string containing a default value when there is an error,
    *  depending on the programming language used <code>APASynthesis.rendering_mode</code>. */
   def errorResultCommon(rm: RenderingMode): String = {
@@ -548,7 +548,7 @@ case class APAProgram(input_variables: List[InputVar],
       case RenderingScala() => errorResultScala(rm)
     }
   }
-  
+
   /** Returns a string containing a default value when there is an error, in Scala. */
   def errorResultScala(rm: RenderingMode): String = {
     if(APASynthesis.run_time_checks) {
@@ -561,7 +561,7 @@ case class APAProgram(input_variables: List[InputVar],
       }
     }
   }
-  
+
   /** Returns a string containing a default value when there is an error, in Python. */
   def errorResultPython(rm: RenderingMode): String = {
     if(APASynthesis.run_time_checks) {
@@ -574,26 +574,26 @@ case class APAProgram(input_variables: List[InputVar],
       }
     }
   }
-  
+
   /** Returns a string containing the input variables in argument of the function.
    *  depending on the programming language used <code>APASynthesis.rendering_mode</code>.*/
   def inputCommonContent:String = APASynthesis.rendering_mode match {
     case RenderingScala() => inputScalaContent
     case RenderingPython() => inputPythonContent
   }
-  
+
   /** Returns a string containing the input variables in argument of the function, in Scala. */
   def inputScalaContent:String = input_variables match {
     case Nil => ""
     case l => (input_variables map (_.name + " : Int") reduceLeft (_+", "+_))
   }
-  
+
   /** Returns a string containing the input variables in argument of the function, in Python. */
   def inputPythonContent:String = input_variables match {
     case Nil => ""
     case l => (input_variables map (_.name) reduceLeft (_+", "+_))
   }
-  
+
   /** Returns a string containing the whole program in Python. */
   def toPythonString(indent: String):String = {
     val function_definition = "def "+name+"("+inputCommonContent+"):"
@@ -601,7 +601,7 @@ case class APAProgram(input_variables: List[InputVar],
     val result = indent + "return " + resultCommonContent("")
     (function_definition::inner_content::result::Nil).reduceLeft(APAAbstractProgram.combineSentences(_, _))
   }
-  
+
   /** Returns a string containing the whole program in Scala. */
   def toScalaString(indent: String):String = {
     val return_type = output_variables match {
@@ -615,14 +615,14 @@ case class APAProgram(input_variables: List[InputVar],
     var prog = function_definition
     (function_definition::inner_content::result::"}"::Nil).reduceLeft(APAAbstractProgram.combineSentences(_, _))
   }
-  
+
   /** Returns the values this program generates with the input l. */
   def execute(l: Map[InputVar, Int]): Map[OutputVar, Int] = {
     var input_value_map = l
     input_assignment foreach {
       case SingleInputAssignment(v, t) => val input_value_assignment = APAAbstractProgram.toAPAInputAssignment(input_value_map)
       t.replaceList(input_value_assignment) match {
-        case APAInputCombination(i, Nil) => input_value_map += (v -> i) 
+        case APAInputCombination(i, Nil) => input_value_map += (v -> i)
         case t =>
           throw new Exception("Was not able to reduce term "+t+" to integer under the mapping "+input_value_map)
       }
@@ -639,7 +639,7 @@ case class APAProgram(input_variables: List[InputVar],
     output_assignment foreach {
       case (v, t) =>
         t.replaceListInput(input_assignments_listed).replaceList(APAAbstractProgram.toAPAOutputAssignment(output_value_map)) match {
-        case APACombination(APAInputCombination(i, Nil), Nil) => output_value_map += (v -> i) 
+        case APACombination(APAInputCombination(i, Nil), Nil) => output_value_map += (v -> i)
         case g =>
           throw new Exception("Was not able to reduce term to integer : "+t+"\nunder the mappings "+input_value_map+" and "+output_value_map+"\nGot : "+g)
       }
@@ -647,4 +647,4 @@ case class APAProgram(input_variables: List[InputVar],
     Map[OutputVar, Int]() ++ (output_variables map {case v => (v, (output_value_map(v)))})
   }
 }
-  
+

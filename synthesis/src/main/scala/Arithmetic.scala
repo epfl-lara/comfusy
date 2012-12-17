@@ -333,12 +333,12 @@ object Arithmetic {
       case Plus(ts) => ts.forall(iqlt(_))
       case Minus(l,r) => iqlt(l) && iqlt(r)
       case Times(ts) => {
-        val varSets: List[Set[VariableID]] = ts.map(variablesOf(_)).map(_ ** restricted)
+        val varSets: List[Set[VariableID]] = ts.map(variablesOf(_)).map(_ & restricted)
 
         var ok = true
-        for(val vs1 <- varSets) {
-          for(val vs2 <- varSets) {
-            if(!(vs1 eq vs2) && !(vs1 ** vs2).isEmpty) {
+        for(vs1 <- varSets) {
+          for(vs2 <- varSets) {
+            if(!(vs1 eq vs2) && !(vs1 & vs2).isEmpty) {
               ok = false
               //println("CE: " + vs1 + " ... " + vs2)
             }
@@ -381,7 +381,7 @@ object Arithmetic {
             sums(varnme) = sums.getOrElse(varnme,0) + coef
           }
           val cstcoef = sums.getOrElse("", 0)
-          sums.removeKey("")
+          sums -= ""
           Some(cstcoef,sums.toList)
         }
       }
@@ -574,7 +574,7 @@ object Arithmetic {
       var ass = Map.empty[String,Int]
       var status: Option[Boolean] = None
 
-      for (val l <- lines) {
+      for (l <- lines) {
         if(l.contains(" -> ")) {
           val spl = l.split(" -> ")
           if(varsInForm.contains(spl(0)))

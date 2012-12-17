@@ -33,9 +33,9 @@ class Rewriter {
     val sformulas = freshSetVars.values.toList // map {case (_, v) => v}
     val f = makeAnd(f0 :: tformulas ::: sformulas)
 
-    val consts = constants(f).toList.sort {_ < _}.map {x => List(IntConst(x))}
-    val elemvars = elemvariables(f).toList.sort {_ > _}.map {TermVar}
-    val setvars = setvariables(f).toList.sort {_ < _}.map {SetVar}
+    val consts = constants(f).toList.sortWith {_ < _}.map {x => List(IntConst(x))}
+    val elemvars = elemvariables(f).toList.sortWith {_ > _}.map {TermVar}
+    val setvars = setvariables(f).toList.sortWith {_ < _}.map {SetVar}
 
     def rek(elems: List[TermVar], bi: List[List[PAInt]]): Unit = elems match {
       case Nil =>
