@@ -230,7 +230,7 @@ object APACaseSplit {
 case class APACaseSplit(programs: List[(APACondition, APAProgram)]) extends APASplit {
 
   /** Returns a list containing the input variables presents in all sub-programs. */
-  def input_variables = (programs flatMap (_._2.input_variables)).removeDuplicates
+  def input_variables = (programs flatMap (_._2.input_variables)).distinct
 
   /** Returns an indented string describing the program. */
   override def toString = toCommonString("  ")
@@ -438,7 +438,7 @@ object APAProgram {
                 output_assignment: List[(OutputVar, APATerm)],
                 output_variables: List[OutputVar]):APAProgram = {
     val final_output_variables = output_variables
-    val interesting_input_variables = (case_splits.input_variables ++ (output_assignment map (_._2) flatMap (_.input_variables))).removeDuplicates
+    val interesting_input_variables = (case_splits.input_variables ++ (output_assignment map (_._2) flatMap (_.input_variables))).distinct
     // Let's propagate assignments that are temporary
     val (reduced_input_assignments, reduced_output_assignments) = APAAbstractProgram.propagation_delete_temp(input_assignment, output_assignment, Nil, Nil, interesting_input_variables, output_variables)
     APAProgram(input_variables, reduced_input_assignments, case_splits, reduced_output_assignments, output_variables)

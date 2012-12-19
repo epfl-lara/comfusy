@@ -54,7 +54,7 @@ object APASynthesis {
   // ************* Different ways of specifying solving conditions ***************/** */
 
   def getOutputVariables(eqs: List[APAEquation]):List[OutputVar] = {
-    (eqs flatMap (_.output_variables)).removeDuplicates
+    (eqs flatMap (_.output_variables)).distinct
   }
 
   def solveLazyEquations(input_variables: List[InputVar], output_variables: List[OutputVar], eqslazy: FormulaSplit):(APACondition, APAProgram) = {
@@ -221,7 +221,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
   def setFalsePrecondition() = global_precondition = APAFalse()::Nil
   def addOutputVar(y: OutputVar) = {
     output_variables = (y::output_variables)
-    output_variables_encountered = (y::output_variables_encountered). removeDuplicates
+    output_variables_encountered = (y::output_variables_encountered). distinct
   }
   def delOutputVar(y: OutputVar) = output_variables -= y
   def addInputVar (y: InputVar)  = {
@@ -380,7 +380,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             }
         }
         // We add the variables if they are needed.
-        //if(((new_assignments flatMap (_.input_variables)).removeDuplicates intersect new_input_variables) != Nil)
+        //if(((new_assignments flatMap (_.input_variables)).distinct intersect new_input_variables) != Nil)
 
 
         //var new_equalities = rest_equalities
@@ -625,8 +625,8 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
           val prog_needed_afterwards = output_variables != Nil
 
           // OptimizeMe : If a is smaller than b, use it instead of a.
-          var output_variables_used = (output_variables_encountered).removeDuplicates
-          var input_variables_used = (input_variables_encountered).removeDuplicates
+          var output_variables_used = (output_variables_encountered).distinct
+          var input_variables_used = (input_variables_encountered).distinct
 
           // We don't care about pairs of equations that are trivial to reduce.
           l_left foreach { case (eqA, a) =>

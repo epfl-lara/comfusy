@@ -480,7 +480,7 @@ trait CodeGeneration {
         case apasc: APASplitCondition => apaSplitConditionToCode(topMap, apasc)
       }).reduceLeft((t1:Tree,t2:Tree) => Apply(Select(t1, nme.ZOR), List(t2)))
 
-      case _ => scala.Predef.error("Should be unreachable.")
+      case _ => scala.sys.error("Should be unreachable.")
     }
 
     // builds a for loop which increments the counter while condTree holds
@@ -500,7 +500,7 @@ trait CodeGeneration {
       case bapa.ASTBAPASyn.Intersec(s1,s2) => Apply(Select(setTermToCode(map,s1,baseTypeTree), encode("&")), List(setTermToCode(map,s2,baseTypeTree)))
       case _ => {
         //setTermToCode(map, bapa.ASTBAPASyn.EmptySet, baseTypeTree)
-        scala.Predef.error("Don't know what to do with : " + term)
+        scala.sys.error("Don't know what to do with : " + term)
       }
     }
 

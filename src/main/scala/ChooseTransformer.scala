@@ -596,7 +596,7 @@ trait ChooseTransformer
         case False() => PASynthesis.PAFalse()
         case Equals(term, IntLit(0)) => PASynthesis.PAEqualZero(makePACombination(term))
         case GreaterEqThan(term, IntLit(0)) => PASynthesis.PAGreaterEqZero(makePACombination(term))
-        case _ => scala.Predef.error("Unexpected formula in format conversion: " + f)
+        case _ => scala.sys.error("Unexpected formula in format conversion: " + f)
       }
 
       def makePACombination(term: Term): PASynthesis.PACombination = term match {
@@ -612,7 +612,7 @@ trait ChooseTransformer
             }
           }
 
-          PASynthesis.PACombination(cstTerm, inVarsAff.reverse.removeDuplicates, outVarsAff.reverse.removeDuplicates)
+          PASynthesis.PACombination(cstTerm, inVarsAff.reverse.distinct, outVarsAff.reverse.distinct)
         }
         case _ => throw EscapeException()
       }
@@ -657,7 +657,7 @@ trait ChooseTransformer
             case None => {
               val mapped = ts.map(tryInTerm(_))
               mapped.count(_.isEmpty) match {
-                case 0 => scala.Predef.error("Something went wrong.")
+                case 0 => scala.sys.error("Something went wrong.")
                 case 1 => {
                   val inTerm: APAInputTerm = mapped.filter(_.isDefined).map(_.get).reduceLeft[APAInputTerm]((x:APAInputTerm,y:APAInputTerm) => APAInputMultiplication(x :: y :: Nil).simplified)
                   // .get should never fail !
@@ -669,9 +669,9 @@ trait ChooseTransformer
             }
           }
         }
-        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
-        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
-        case Min(ts) => scala.Predef.error("Mod should not occur.")
+        case Div(t1, t2) => scala.sys.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.sys.error("Mod should not occur.")
+        case Min(ts) => scala.sys.error("Mod should not occur.")
       }):APACombination).simplified
 
       def tryInTerm(term: Term): Option[APAInputTerm] = (term match {
@@ -708,15 +708,15 @@ trait ChooseTransformer
             }
           }
         }
-        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
-        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
-        case Min(ts) => scala.Predef.error("Mod should not occur.")
+        case Div(t1, t2) => scala.sys.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.sys.error("Mod should not occur.")
+        case Min(ts) => scala.sys.error("Mod should not occur.")
       }).map(_.simplified)
 
       try {
         Some(f2apaf(formula))
       } catch {
-        case EscapeException() => scala.Predef.error("was quasi-linear or not??"); None
+        case EscapeException() => scala.sys.error("was quasi-linear or not??"); None
       }
     }
 
@@ -730,7 +730,7 @@ trait ChooseTransformer
         case False() => APAFalse()
         case Equals(term, IntLit(0)) => APAEqualZero(makeAPACombination(term))
         case GreaterEqThan(term, IntLit(0)) => APAGreaterEqZero(makeAPACombination(term))
-        case _ => scala.Predef.error("Unexpected formula in APA format conversion: " + f)
+        case _ => scala.sys.error("Unexpected formula in APA format conversion: " + f)
       }
 
       def makeAPACombination(term: Term): APACombination = term match {
@@ -746,7 +746,7 @@ trait ChooseTransformer
             }
           }
 
-          APACombination(APAInputCombination(cstTerm, inVarsAff.reverse.removeDuplicates), outVarsAff.reverse.removeDuplicates)
+          APACombination(APAInputCombination(cstTerm, inVarsAff.reverse.distinct), outVarsAff.reverse.distinct)
         }
         case _ => throw EscapeException()
       }

@@ -32,10 +32,10 @@ object PASynthesis {
       case PATrue() => Nil
       case PAFalse() => Nil
       case PADivision(pac, n) => pac.output_variables
-      case PADisjunction(l) => (l flatMap (_.output_variables)).removeDuplicates
-      case PAConjunction(l) => (l flatMap (_.output_variables)).removeDuplicates
-      case PAMinimum(l) => (l flatMap (_.output_variables)).removeDuplicates
-      case PAMaximum(l) => (l flatMap (_.output_variables)).removeDuplicates
+      case PADisjunction(l) => (l flatMap (_.output_variables)).distinct
+      case PAConjunction(l) => (l flatMap (_.output_variables)).distinct
+      case PAMinimum(l) => (l flatMap (_.output_variables)).distinct
+      case PAMaximum(l) => (l flatMap (_.output_variables)).distinct
     }
     def input_variables:List[InputVar] = this match {
       case PACombination(c, i, o) => i map (_._2)
@@ -46,10 +46,10 @@ object PASynthesis {
       case PATrue() => Nil
       case PAFalse() => Nil
       case PADivision(pac, n) => pac.input_variables
-      case PADisjunction(l) => (l flatMap (_.input_variables)).removeDuplicates
-      case PAConjunction(l) => (l flatMap (_.input_variables)).removeDuplicates
-      case PAMinimum(l) => (l flatMap (_.input_variables)).removeDuplicates
-      case PAMaximum(l) => (l flatMap (_.input_variables)).removeDuplicates
+      case PADisjunction(l) => (l flatMap (_.input_variables)).distinct
+      case PAConjunction(l) => (l flatMap (_.input_variables)).distinct
+      case PAMinimum(l) => (l flatMap (_.input_variables)).distinct
+      case PAMaximum(l) => (l flatMap (_.input_variables)).distinct
     }
     def has_output_variables: Boolean = (output_variables != Nil) //OptimizeMe!
     /// Simplified version of this expression
@@ -560,7 +560,7 @@ object PASynthesis {
   object PACondition {
     def empty: PACondition = PACondition(Nil, PAFalse())
     def optimized(input_assignment: List[(InputVar, PATerm)], global_condition: PAFormula):PACondition = {
-      val final_input_variables = (global_condition.input_variables).removeDuplicates
+      val final_input_variables = (global_condition.input_variables).distinct
 
       val (useful_input_assignments, _) = input_assignment.foldRight((Nil:List[(InputVar, PATerm)], final_input_variables:List[InputVar])) {
         case (assignment@(x, t), (useful_input_assignments, useful_input_variables)) =>
@@ -603,7 +603,7 @@ object PASynthesis {
   // ************* Different ways of specifying solving conditions ***************///
 
   def getOutputVariables(eqs: List[PAEquation]):List[OutputVar] = {
-    (eqs flatMap (_.output_variables)).removeDuplicates
+    (eqs flatMap (_.output_variables)).distinct
   }
 
   def solveEquations(name: String, variables: List[OutputVar], eqs: List[PAEquation]) = {
@@ -817,7 +817,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
   var output_variables:List[OutputVar] = output_variables_initial
   var output_variables_encountered:List[OutputVar]  = output_variables_initial
 
-  val input_variables_initial:List[InputVar]  = (equations flatMap (_.input_variables)).removeDuplicates
+  val input_variables_initial:List[InputVar]  = (equations flatMap (_.input_variables)).distinct
   var input_variables:List[InputVar]  = input_variables_initial
   var input_variables_encountered:List[InputVar]  = input_variables_initial
 
@@ -832,7 +832,7 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
   def setFalsePrecondition() = global_precondition = PAFalse()::Nil
   def addOutputVar(y: OutputVar) = {
     output_variables = (y::output_variables)
-    output_variables_encountered = (y::output_variables_encountered). removeDuplicates
+    output_variables_encountered = (y::output_variables_encountered). distinct
   }
   def delOutputVar(y: OutputVar) = output_variables -= y
   def addInputVar (y: InputVar)  = {
@@ -1154,8 +1154,8 @@ class PASynthesis(equations: List[PASynthesis.PAEquation], output_variables_init
           delOutputVar(y)
         }
         // OptimizeMe : If a is smaller than b, use it instead of a.
-        var output_variables_used = (output_variables_encountered).removeDuplicates
-        var input_variables_used = (input_variables_encountered).removeDuplicates
+        var output_variables_used = (output_variables_encountered).distinct
+        var input_variables_used = (input_variables_encountered).distinct
 
         // We collect a list of list of disjoint possibilities
         val disjoint_possibilities:List[List[(PAGreaterEqZero, PAEqualZero)]] = l_left flatMap { case (eqA, a) =>

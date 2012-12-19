@@ -53,27 +53,27 @@ abstract sealed class APAExpression {
     case APATrue() => Nil
     case APAFalse() => Nil
     case APADivision(pac, n) => pac.output_variables
-    case APADisjunction(l) => (l flatMap (_.output_variables)).removeDuplicates
-    case APAConjunction(l) => (l flatMap (_.output_variables)).removeDuplicates
-    case APAMinimum(l) => (l flatMap (_.output_variables)).removeDuplicates
-    case APAMaximum(l) => (l flatMap (_.output_variables)).removeDuplicates
+    case APADisjunction(l) => (l flatMap (_.output_variables)).distinct
+    case APAConjunction(l) => (l flatMap (_.output_variables)).distinct
+    case APAMinimum(l) => (l flatMap (_.output_variables)).distinct
+    case APAMaximum(l) => (l flatMap (_.output_variables)).distinct
     case APANegation(e)=> e.output_variables
   }
 
   /** Returns the list of input variables this expression contains. */
   def input_variables:List[InputVar] = this match {
-    case APACombination(c, o) => (c.input_variables ++ ((o map (_._1)) flatMap (_.input_variables))).removeDuplicates
-    case APADivides(c, pac) => (pac.input_variables ++ c.input_variables).removeDuplicates
+    case APACombination(c, o) => (c.input_variables ++ ((o map (_._1)) flatMap (_.input_variables))).distinct
+    case APADivides(c, pac) => (pac.input_variables ++ c.input_variables).distinct
     case APAEqualZero(pac) => pac.input_variables
     case APAGreaterZero(pac) => pac.input_variables
     case APAGreaterEqZero(pac) => pac.input_variables
     case APATrue() => Nil
     case APAFalse() => Nil
-    case APADivision(pac, c) => (pac.input_variables ++ c.input_variables).removeDuplicates
-    case APADisjunction(l) => (l flatMap (_.input_variables)).removeDuplicates
-    case APAConjunction(l) => (l flatMap (_.input_variables)).removeDuplicates
-    case APAMinimum(l) => (l flatMap (_.input_variables)).removeDuplicates
-    case APAMaximum(l) => (l flatMap (_.input_variables)).removeDuplicates
+    case APADivision(pac, c) => (pac.input_variables ++ c.input_variables).distinct
+    case APADisjunction(l) => (l flatMap (_.input_variables)).distinct
+    case APAConjunction(l) => (l flatMap (_.input_variables)).distinct
+    case APAMinimum(l) => (l flatMap (_.input_variables)).distinct
+    case APAMaximum(l) => (l flatMap (_.input_variables)).distinct
     case APANegation(e)=> e.input_variables
   }
 

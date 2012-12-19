@@ -443,7 +443,7 @@ case class APAInputDivision(numerator: List[APAInputTerm], denominator : List[AP
 
   /** Returns the list of input variables that this division contains. */
   def input_variables: List[InputVar] = {
-    ((numerator flatMap (_.input_variables)) ++ (denominator flatMap (_.input_variables))).removeDuplicates
+    ((numerator flatMap (_.input_variables)) ++ (denominator flatMap (_.input_variables))).distinct
   }
 }
 
@@ -506,7 +506,7 @@ case class APAInputMultiplication(operands: List[APAInputTerm]) extends APAInput
 
   /** Returns the list of input variables contained in this multiplication. */
   def input_variables: List[InputVar] = {
-    (operands flatMap (_.input_variables)).removeDuplicates
+    (operands flatMap (_.input_variables)).distinct
   }
 }
 
@@ -573,7 +573,7 @@ case class APAInputAddition(l: List[APAInputTerm]) extends APAInputTerm {
 
   /** Returns the list of input variables contained in this addition. */
   def input_variables: List[InputVar] = {
-    (l flatMap (_.input_variables)).removeDuplicates
+    (l flatMap (_.input_variables)).distinct
   }
 }
 
@@ -641,7 +641,7 @@ case class APAInputGCD(l: List[APAInputTerm]) extends APAInputTerm {
 
   /** Returns the list of input variables contained in this gcd. */
   def input_variables: List[InputVar] = {
-    (l flatMap (_.input_variables)).removeDuplicates
+    (l flatMap (_.input_variables)).distinct
   }
 }
 
@@ -675,7 +675,7 @@ case class APAInputLCM(l: List[APAInputTerm]) extends APAInputTerm {
 
   /** Returns the list of input variables contained in this lcm. */
   def input_variables: List[InputVar] = {
-    (l flatMap (_.input_variables)).removeDuplicates
+    (l flatMap (_.input_variables)).distinct
   }
 }
 /*
@@ -698,6 +698,6 @@ case class APAInputMod(operand: APAInputTerm, divisor: APAInputTerm) extends APA
     APAInputMod(operand.replace(y, t), divisor.replace(y, t)).simplified.propagateSign(this)
   }
   def input_variables: List[InputVar] = {
-    (operand.input_variables ++ divisor.input_variables).removeDuplicates
+    (operand.input_variables ++ divisor.input_variables).distinct
   }
 }*/
