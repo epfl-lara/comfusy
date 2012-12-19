@@ -1,0 +1,14 @@
+COMFUSY: COMPLETE FUNCTIONAL SYNTHESIS
+======================================
+
+http://lara.epfl.ch/w/comfusy
+
+Homebrew users can easily install z3 via the formula in this
+pull request: https://github.com/mxcl/homebrew/pull/16188
+
+This repository begins with the source code linked from that
+page for scala 2.7.7, then ports the source to 2.8, 2.9, and
+finally 2.10, moving from ant to sbt along the way.
+
+I am unaffiliated with the authors of this code, I'm just
+an interested observer who prefers scala 2.10.
