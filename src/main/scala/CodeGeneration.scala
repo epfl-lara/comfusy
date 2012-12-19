@@ -6,7 +6,6 @@ trait CodeGeneration {
   self: ChooseTransformer =>
   import global._
   import PASynthesis._
-  import scala.tools.nsc.util.Position
 
   type SymbolMap = Map[String,Symbol]
 

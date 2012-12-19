@@ -18,9 +18,9 @@ class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin)
   var fresh: scala.tools.nsc.util.FreshNameCreator = null
 
   protected def stopIfErrors: Unit = {
-    if(reporter.hasErrors) {
+    if (reporter.hasErrors) {
       println("There were errors.")
-      exit(0)
+      sys.exit(1)
     }
   }
 

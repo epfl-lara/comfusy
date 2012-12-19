@@ -240,10 +240,10 @@ class CommonTest extends FunSpec with ShouldMatchers {
       try {
         val m = mi.next
         throw new Error("There should have been an exception")
-      } catch {
-        case e =>
       }
-
+      catch {
+        case e: Exception =>
+      }
     }
   }
 }

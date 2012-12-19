@@ -21,7 +21,7 @@ object Algorithm {
 // -------------- Step 1
 
   def removeSetEqulitiesInAtom(a: Atom): Formula = a match {
-    case SetEqual(s1, s2) => 
+    case SetEqual(s1, s2) =>
       And(FAtom(SetSubset(s1, s2)), FAtom(SetSubset(s2, s1)))
     case _ =>  FAtom(a)
   }
@@ -46,7 +46,7 @@ object Algorithm {
 
 
   def removeSetSubsetsInAtom(a: Atom): Formula = a match {
-    case SetSubset(s1, s2) => 
+    case SetSubset(s1, s2) =>
       FAtom(IntEqual(Card(Intersec(s1, Compl(s2))), IntConst (0)))
     case _ =>  FAtom(a)
   }
@@ -132,7 +132,7 @@ object Algorithm {
     s
   }
 
-  def createMap0fVennRegions(l: List[String]): Map[String, Set[String]] = { 
+  def createMap0fVennRegions(l: List[String]): Map[String, Set[String]] = {
     val tm = Map[String, Set[String]]()
     val n = l.length
     var i = 0
@@ -224,7 +224,7 @@ object Algorithm {
       val i1n = replaceSetsWithDijointUnionsAndRemoveCardinalitiesinInt(i1, m)
       IntDivides(c, i1n)
     }
-    case x@_ => error("Impossible case :" + x)  
+    case x@_ => sys.error("Impossible case :" + x)
   }
 
   def replaceSetsWithDijointUnionsAndRemoveCardinalities(f: Formula, m: Map[String,Set[String]]): Formula = f match {
@@ -245,7 +245,7 @@ object Algorithm {
     case FAtom(a) =>{
       val an = replaceSetsWithDijointUnionsAndRemoveCardinalitiesinAtom(a, m)
       FAtom(an)
-    } 
+    }
   }
 
   def cardinalitiesOfVennRegions(m: Map[String, Set[String]]): List[String] = {
@@ -255,7 +255,7 @@ object Algorithm {
     l1
   }
 
-  def step2and3(f: Formula, l: List[String]): (Formula, Map[String, Set[String]], List[String]) = { 
+  def step2and3(f: Formula, l: List[String]): (Formula, Map[String, Set[String]], List[String]) = {
     val m = createMap0fVennRegions(l)
     val f1 = replaceSetsWithDijointUnionsAndRemoveCardinalities(f, m)
     val v = cardinalitiesOfVennRegions(m)
@@ -270,7 +270,7 @@ object Algorithm {
 // ------------- Step 4
 
   def createListOfSetsAndComplements(s: List[String], l: List[String]): List[BASet] = {
-    var l1: List[BASet] = Nil 
+    var l1: List[BASet] = Nil
     var i = 0
     s.foreach(e => {
       val v = SetVar(l(i))
@@ -320,17 +320,17 @@ object Algorithm {
     case EmptySet => false
     case UnivSet => false
     case Intersec(s1, s2) => {
-      val b1 = isOnlyComplements(s1) 
+      val b1 = isOnlyComplements(s1)
       val b2 = isOnlyComplements(s2)
       b1 && b2
     }
-    case x@_ => error("Impossible case :" + x)  
+    case x@_ => sys.error("Impossible case :" + x)
   }
 
 
 
-  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]): 
-   // input: list of venn regions of input set, m map which says which venn regions are in a set 
+  def createListOfFormulasAboutVennRegions(l: List[BASet], m: Map[String, Set[String]]):
+   // input: list of venn regions of input set, m map which says which venn regions are in a set
    // output: list of formula expressing h_u + ... +h_v = c_i and map c_i = card(A INTRS BC..)
    (List[Formula], List[(String, PAInt)]) = {
     var lf: List[Formula] = Nil
@@ -368,14 +368,14 @@ object Algorithm {
     f1
   }
 
-  def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, PAInt)]) = { 
+  def step4(m: Map[String, Set[String]], l: List[String], constrainOuterRegion: Boolean): (Formula, List[(String, PAInt)]) = {
     val l0 = createListOfVennRegions(l)
     val ls = if (constrainOuterRegion) l0.filter(h => !(isOnlyComplements(h)))
       else l0
     val compl = l0.filter(h => isOnlyComplements(h))
     val (lf, lt) = createListOfFormulasAboutVennRegions(ls, m)
     val lf1 = if (!(constrainOuterRegion)) lf
-      else { 
+      else {
         val lf2 = createFormulaThatWeCannotAddEllements(compl.head, m)
         lf2 ::: lf
       }
@@ -392,7 +392,7 @@ object Algorithm {
 
   def createFormulaToCallSynthesiser(vars: List[String], f: Formula, fQE: Formula): Formula = {
     var f1 = And(f, fQE)
-    vars.foreach(v => { 
+    vars.foreach(v => {
       val ft = FAtom(IntLessEqual(IntConst(0), IntVar(v)))
       f1 = And(ft, f1)
     })
@@ -437,10 +437,10 @@ object Algorithm {
     }
   }
 
-  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]], 
+  def outputValuesofSet(e: String, s: List[String], hValues: Map[String, PAInt], vRegions: Map[String, Set[String]],
    i: Int, constrainOuterRegion: Boolean): (Int, List[SetAssignment]) = {
 // e - output set variable who we are defining here
-// s - already known set variables, hValues - values of h variables (h00 -> SetVar(h00V), etc.) 
+// s - already known set variables, hValues - values of h variables (h00 -> SetVar(h00V), etc.)
 // vRegions - aready existing a map saying which Venn region is contained in a set
 // counting added sets,  constrainOuterRegion: Boolean, true=no fresh variables
     val l0 = createListOfVennRegions(s)
@@ -448,7 +448,7 @@ object Algorithm {
       else l0
     var k = i
     var listOfSets: List[String] = Nil
-    var listOfAssigments: List[SetAssignment] = Nil 
+    var listOfAssigments: List[SetAssignment] = Nil
     l.foreach(j => {
        val j1 = getListofVennRegionsinS(Intersec(j, SetVar(e)), vRegions)
        val dj = evaluateValuesofExpressions(j1, hValues)
@@ -494,7 +494,7 @@ object Algorithm {
      val outputVarsForMikael: List[String] = l ::: vars
      val m1 = callArithmeticSynthesiser(k, l ::: vars, f1)
      var s = x
-     var listOfAssignments: List[SetAssignment] = Nil 
+     var listOfAssignments: List[SetAssignment] = Nil
      var i = 0
      y.foreach(e => {
        val (j, tl) = outputValuesofSet(e, s, m1, m, i, constrainOuterRegion)

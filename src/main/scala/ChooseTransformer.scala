@@ -160,7 +160,7 @@ trait ChooseTransformer
 
           val scrutSym = selector match {
             case i @ Ident(_) if i.symbol.isStable => i.symbol
-            case _ => currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
+            case _ => currentOwner.newValue(unit.freshTermName("scrutinee"), selector.pos).setInfo(selector.tpe)
           }
           val scrutName: String = scrutSym.name.toString
 
@@ -203,7 +203,7 @@ trait ChooseTransformer
                     } else {
                       // we build new symbols
                       val newOutSyms = outVarSyms.map(s =>
-                        currentOwner.newValue(s.pos, unit.fresh.newName(s.pos, s.name.toString)).setInfo(definitions.IntClass.tpe)
+                        currentOwner.newValue(unit.freshTermName(s.name.toString), s.pos).setInfo(definitions.IntClass.tpe)
                       )
                       //val wcSyms = wildcards.toList.map(w =>
                       //  currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "wc$")).setInfo(definitions.IntClass.tpe)
@@ -222,7 +222,7 @@ trait ChooseTransformer
                         )
                       } else {
                         val outVarCount = outVarSyms.size
-                        val tupleHolderSym = currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "t")).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
+                        val tupleHolderSym = currentOwner.newValue(unit.freshTermName("t"), cse.pat.pos).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
 
                         Block(
                           ValDef(tupleHolderSym, computedTuple) :: (
@@ -398,7 +398,7 @@ trait ChooseTransformer
           // CODE GENERATION
           var symbolMap: SymbolMap = Map.empty
           // we put in the 'c' symbols
-          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
           inIntVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
           inSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
 
@@ -413,13 +413,13 @@ trait ChooseTransformer
             dprintln(paPrec)
             dprintln(paProg)
             val mikiFun: Tree = codeGen.programToCode(paPrec, paProg, true)
-            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
 
             val lovss = linOutVars.size
             if(lovss == 1) {
               List(ValDef(symbolMap(linOutVars.head), mikiFun))
             } else {
-              val tempTupleSym = currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
+              val tempTupleSym = currentOwner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
               ValDef(tempTupleSym, mikiFun) :: (
                 for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
             }
@@ -428,7 +428,7 @@ trait ChooseTransformer
           outSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
           val concludingAssigns: List[Tree] = (for(ass <- asss) yield {
             if(!symbolMap.isDefinedAt(ass.setName)) {
-              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, ass.setName + "$")).setInfo(instantiatedSetType))
+              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(unit.fresh.newName(ass.setName + "$")).setInfo(instantiatedSetType))
             }
             ass match {
               case bapa.ASTBAPASyn.Simple(nme, setExpr) => ValDef(symbolMap(nme), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
