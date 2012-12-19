@@ -8,6 +8,6 @@ For more info, please read the [corresponding page hosted at EPFL](http://lara.e
 References
 ----------
 
-  1. V.Kuncak, M.Mayer, R.Piskac, P.Suter, *Complete Functional Synthesis*, In: Proceedings of the 2010 ACM SIGPLAN conference on Programming Language
+  1. V.Kuncak, M.Mayer, R.Piskac, P.Suter, *Complete Functional Synthesis*, Proceedings of the 2010 ACM SIGPLAN conference on Programming Language
 Design and Implementation (PLDI). 2010, pp. 316–329.
-  2. V.Kuncak, M.Mayer, R.Piskac, P.Suter, *Software Synthesis Procedures*, In: Communications of the ACM (Feb. 2012), pp. 103–111.
+  2. V.Kuncak, M.Mayer, R.Piskac, P.Suter, *Software Synthesis Procedures*, Communications of the ACM (Feb. 2012), pp. 103–111.
