@@ -8,4 +8,8 @@ val answer = choose((x: Int) => x > 41)
 EOM
 }
 
-sbt package && /scala/inst/210/bin/scala -Yrepl-sync -i <(imports) -Xplugin:synthesis-plugin.jar -classpath synthesis-plugin.jar
+sbt package
+
+pluginjar=$(ls target/scala-2.10*/*.jar)
+
+/scala/inst/210/bin/scala -i <(imports) -Xplugin:$pluginjar -classpath $pluginjar
