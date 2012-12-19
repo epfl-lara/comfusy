@@ -3,7 +3,7 @@ package synthesis
 import org.scalatest._
 import org.scalatest.matchers._
 
-class APASynthesisTest extends Spec with ShouldMatchers {
+class APASynthesisTest extends FunSpec with ShouldMatchers {
   def O(name: String) = OutputVar(name)
   def I(name: String) = InputVar(name)
   implicit def OutputVarToPACombination(o: OutputVar):APACombination = APACombination(o)
@@ -21,12 +21,12 @@ class APASynthesisTest extends Spec with ShouldMatchers {
   val x0 = I("x0")
   val c = I("c")
   val d = I("d")
-  
+
   val emptyMap = Map[InputVar, Int]()
   APASynthesis.advanced_modulo = true
   APASynthesis.run_time_checks = true
   APASynthesis.rendering_mode = RenderingScala()
-  
+
   describe("Creator of new variable") {
     it("should create a variable not contained in a list") {
       val l_output_vars = x::x1::y::y1::Nil
@@ -34,7 +34,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       l_output_vars should not contain v
     }
   }
-  
+
   describe("APACombinations") {
     it("Should simplify expressions") {
       val pac = APACombination(0, (1, b)::(2, c)::(-2, b)::Nil, (2, x)::(1, y)::(-2, x)::Nil).simplified
@@ -92,7 +92,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       APACombination(0, Nil, (-1, x)::(-1, y)::Nil).toNiceString should equal ("-x-y")
     }
   }
-  
+
   describe("APASynthesis instance") {
     it("should solve underconstrained equations") {
       val pac = b + x*10 + y*14 + z*35 === 0
@@ -177,12 +177,12 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       val solution = APASynthesis.solve("finding_bezout2", eq1)
       solution._1.global_condition should equal (APADivides(3, APAInputCombination(b)+(-2)))
       println(solution._2)
-      
+
       val vb1 = 8
       val mapping1 = solution._2.execute(Map[InputVar, Int]() + (b -> vb1))
       val (vx1, vy1, vz1) = (mapping1(x), mapping1(y), mapping1(z))
       (vb1 + vx1*9 + vy1*15 + vz1*6) should equal (2)
-      
+
       val vb2 = 7
       val mapping2 = solution._2.execute(Map[InputVar, Int]() + (b -> vb2))
       val (vx2, vy2, vz2) = (mapping2(x), mapping2(y), mapping2(z))
@@ -234,7 +234,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       val solution = APASynthesis.solve("bounded_right", pac1, pac2)
       solution._1.global_condition should equal (APATrue())
       println(solution._2)
-      
+
       val vb = 179
       val vc = 351
       val vd = 243
@@ -285,7 +285,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       val vb = 7
       solution._1.execute(Map[InputVar, Int]() + (b -> vb)) should be (true)
       val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
-      
+
       val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
       (vx >= 0) should be (true)
       (vy-vx >= 0) should be (true)
@@ -332,7 +332,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
            m >= 0 && m < 60
       )
       val solution = APASynthesis.solve("getHourMinutSeconds", condition)
-      
+
       val vseconds = -69
       println(solution._2)
       solution._1.execute(Map[InputVar, Int]() + (seconds -> vseconds)) should be (true)
@@ -352,14 +352,14 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       }
     }
     it("should solve divisibility conditions") {
-      val condition = (x divisible_by 3) && ((x + b) divisible_by 7) 
+      val condition = (x divisible_by 3) && ((x + b) divisible_by 7)
       val solution = APASynthesis.solve("divisibility37", condition)
       println(solution._1)
       val vb = -69
       println(solution._2)
       solution._1.execute(Map[InputVar, Int]() + (b -> vb)) should be (true)
       val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
-      val vx = mapping(x) 
+      val vx = mapping(x)
       (vx % 3) should equal (0)
       ((vx+vb) % 7) should equal (0)
     }
@@ -373,7 +373,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       def shouldWork(vb: Int, vc: Int) {
         val input = emptyMap + (b -> vb) + (c -> vc)
         solution._1.execute(input) should be (true)
-        solution._2.execute(input)(y)*vc should equal (vb) 
+        solution._2.execute(input)(y)*vc should equal (vb)
       }
       def shouldFail(vb: Int, vc: Int) {
         val input =  emptyMap + (b -> vb) + (c -> vc)
@@ -396,7 +396,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       def shouldWork(vb: Int, vc: Int) {
         val input = emptyMap + (b -> vb) + (c -> vc)
         solution._1.execute(input) should be (true)
-        (solution._2.execute(input)(y)*vc >= vb) should be (true) 
+        (solution._2.execute(input)(y)*vc >= vb) should be (true)
       }
       def shouldFail(vb: Int, vc: Int) {
         val input =  emptyMap + (b -> vb) + (c -> vc)
@@ -419,7 +419,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
         val input = emptyMap + (b -> vb) + (c -> vc)
         solution._1.execute(input) should be (true)
         val vy =  solution._2.execute(input)(y)
-        ( vy*vc == vb || vy*vb == vc) should be (true) 
+        ( vy*vc == vb || vy*vb == vc) should be (true)
       }
       def shouldFail(vb: Int, vc: Int) {
         val input =  emptyMap + (b -> vb) + (c -> vc)
@@ -435,7 +435,7 @@ class APASynthesisTest extends Spec with ShouldMatchers {
       shouldWork(-12, 0)
       shouldFail(12, 5)
       shouldFail(12, -5)
-      
+
       println(solution._1)
       println(solution._2)
     }

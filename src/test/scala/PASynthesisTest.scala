@@ -3,7 +3,7 @@ package synthesis
 import org.scalatest._
 import org.scalatest.matchers._
 
-class PASynthesisTest extends Spec with ShouldMatchers {
+class PASynthesisTest extends FunSpec with ShouldMatchers {
   import PASynthesis._
   def O(name: String) = PASynthesis.OutputVar(name)
   def I(name: String) = PASynthesis.InputVar(name)
@@ -16,12 +16,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
   val y = O("y")
   val y1 = O("y1")
   val z = O("z")
-  
+
   val b = I("b")
   val x0 = I("x0")
   val c = I("c")
   val d = I("d")
-  
+
   describe("Creator of new variable") {
     it("should create a variable not contained in a list") {
       val l_output_vars = x::x1::y::y1::Nil
@@ -29,7 +29,7 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       l_output_vars should not contain v
     }
   }
-  
+
   describe("PACombinations") {
     it("Should simplify expressions") {
       val pac = PACombination(0, (1, b)::(2, c)::(-2, b)::Nil, (2, x)::(1, y)::(-2, x)::Nil).simplified
@@ -161,12 +161,12 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve("finding_bezout2", eq1)
       solution._1.global_condition should equal (PADivides(3, b+(-2)))
       println(solution._2)
-      
+
       val vb1 = 8
       val mapping1 = solution._2.execute(Map[InputVar, Int]() + (b -> vb1))
       val (vx1, vy1, vz1) = (mapping1(x), mapping1(y), mapping1(z))
       (vb1 + vx1*9 + vy1*15 + vz1*6) should equal (2)
-      
+
       val vb2 = 7
       val mapping2 = solution._2.execute(Map[InputVar, Int]() + (b -> vb2))
       val (vx2, vy2, vz2) = (mapping2(x), mapping2(y), mapping2(z))
@@ -216,7 +216,7 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val solution = PASynthesis.solve("bounded_right", pac1, pac2)
       solution._1.global_condition should equal (PATrue())
       println(solution._2)
-      
+
       val vb = 179
       val vc = 351
       val vd = 243
@@ -265,7 +265,7 @@ class PASynthesisTest extends Spec with ShouldMatchers {
       val vb = 7
       solution._1.execute(Map[InputVar, Int]() + (b -> vb)) should be (true)
       val mapping = solution._2.execute(Map[InputVar, Int]() + (b -> vb))
-      
+
       val (vx, vy, vz) = (mapping(x), mapping(y), mapping(z))
       (vx >= 0) should be (true)
       (vy-vx >= 0) should be (true)
@@ -321,7 +321,7 @@ class PASynthesisTest extends Spec with ShouldMatchers {
         && m >= 0 && m < 60
       )
       val solution = PASynthesis.solve("getHourMinutSeconds", condition)
-      
+
       val vseconds = -69
       println(solution._2)
       solution._1.execute(Map[InputVar, Int]() + (seconds -> vseconds)) should be (true)

@@ -27,7 +27,7 @@ case class RenderingScala() extends RenderingMode {
        string_numerator+"%%"+denominator
     else
       "("+denominator+" + "+string_numerator+"%"+denominator+")%"+denominator
-    
+
   }
 }
 
@@ -42,38 +42,38 @@ case class RenderingPython() extends RenderingMode {
 
 object APASynthesis {
   /** ************* Synthesis options *************** */
-  // To allow rendering expressions of the for a %% b where a %% 0 == a,  and else (k %% b) is always between 0 and b-1 and congruent to k modulo b.  
+  // To allow rendering expressions of the for a %% b where a %% 0 == a,  and else (k %% b) is always between 0 and b-1 and congruent to k modulo b.
   var advanced_modulo = false
-  
-  // To turn off run-time checks : if true, the "throw new Error" are replaced by tuples filleds with zeros. 
+
+  // To turn off run-time checks : if true, the "throw new Error" are replaced by tuples filleds with zeros.
   var run_time_checks = false
-  
+
   // Other rendering mode
   var rendering_mode:RenderingMode = RenderingScala()
-  
+
   // ************* Different ways of specifying solving conditions ***************/** */
-  
+
   def getOutputVariables(eqs: List[APAEquation]):List[OutputVar] = {
-    (eqs flatMap (_.output_variables)).removeDuplicates
+    (eqs flatMap (_.output_variables)).distinct
   }
-  
+
   def solveLazyEquations(input_variables: List[InputVar], output_variables: List[OutputVar], eqslazy: FormulaSplit):(APACondition, APAProgram) = {
     return (new APASynthesis(eqslazy, input_variables, output_variables)).solve()
   }
-  
+
   def solveLazyEquations(name: String, output_variables: List[OutputVar], eqs: APAFormula):(APACondition, APAProgram) = {
     val input_variables = eqs.input_variables
     var (cond, prog) = (new APASynthesis(eqs.getLazyEquations, input_variables, output_variables)).solve()
     prog.setName(name)
     (cond, prog)
   }
-  
+
   /*def solveEquations(name: String, variables: List[OutputVar], eqs: List[APAEquation]) = {
     var (cond, prog) = (new APASynthesis(eqs, variables)).solve()
     prog.setName(name)
     (cond, prog)
   }*/
-  
+
   def solve(name: String, output_variables: List[OutputVar], formula_sequence: APAFormula*):(APACondition, APAProgram) = {
     val formula = APAConjunction(formula_sequence.toList).simplified
     //val dnf:Stream[List[APAEquation]] = formula.getEquations
@@ -103,7 +103,7 @@ object APASynthesis {
     val formula = APAConjunction(formula_sequence).simplified
     solve("result", formula.output_variables, formula)
   }
-  
+
 
   /** ************* Function used in the algorithm *************** */
   val alphabet = "abcdefghijklmnopqrstuvwxyz"
@@ -129,7 +129,7 @@ object APASynthesis {
     }
     InputVar("k"+i)
   }
-  
+
   // Split the list into APAEqualZero one left and not APAEqualZero on right
   def partitionPAEqualZero(eqs : List[APAEquation]):(List[APAEqualZero], List[APAEquation]) = eqs match {
     case Nil => (Nil, Nil)
@@ -160,7 +160,7 @@ object APASynthesis {
       throw new Error("Divides are not supported at this point")
   }
 
-  
+
   def recursive_propagation(
       output_assignments : List[(OutputVar, APATerm)],
       assignments_to_propagate : List[(OutputVar, APACombination)],
@@ -190,10 +190,10 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
   import APASynthesis._
   var output_variables:List[OutputVar] = output_variables_initial
   var output_variables_encountered:List[OutputVar]  = output_variables_initial
-  
+
   var input_variables:List[InputVar]  = input_variables_initial
   var input_variables_encountered:List[InputVar]  = input_variables_initial
-  
+
   // Global_precondition is a conjunction of disjunctions of conjunctions.
   var global_precondition: List[APAFormula] = Nil
   // equation should not have output variables
@@ -202,7 +202,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     if(f.output_variables != Nil) // Debug sentence
         throw new Exception("Error: there should be no output variables in this precondition :"+f)
     f match {
-      case APATrue() => 
+      case APATrue() =>
       case APAFalse() => setFalsePrecondition()
       case APAConjunction(l) => l foreach (addPrecondition(_))
       case APAGreaterEqZero(APACombination(i, Nil)) => // We forward the constraint.
@@ -221,7 +221,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
   def setFalsePrecondition() = global_precondition = APAFalse()::Nil
   def addOutputVar(y: OutputVar) = {
     output_variables = (y::output_variables)
-    output_variables_encountered = (y::output_variables_encountered). removeDuplicates
+    output_variables_encountered = (y::output_variables_encountered). distinct
   }
   def delOutputVar(y: OutputVar) = output_variables -= y
   def addInputVar (y: InputVar)  = {
@@ -266,18 +266,18 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     case (_, APAInputCombination(k2, Nil)) => false
     case (_, _) => false
   }
-  
+
   /** Returns the remaining non_equalities (non_equalities should not contain equalities, nor will the returned term do) */
-  def solveEqualities(data: FormulaSplit): APASplit = {    
+  def solveEqualities(data: FormulaSplit): APASplit = {
     val FormulaSplit(equalities, non_equalities, remaining_disjunctions) = data
 
     /** Make sure all equalities have at least one output variable, else remove them. */
     val (interesting_equalities, precondition_equalities) = equalities partition (_.has_output_variables)
     addPrecondition(APAConjunction(precondition_equalities))
-    
+
 
     def minInputTerms(coef1: APAInputTerm, coef2:APAInputTerm) = if(needsLessOperations(coef1, coef2)) coef1 else coef2
-    
+
     /** Sorting function (OptimizeMe) */
     /** Priority to constant terms */
     def by_least_outputvar_coef(eq1: APAEqualZero, eq2: APAEqualZero): Boolean = (eq1, eq2) match {
@@ -286,9 +286,9 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         val min_coefs_o2 = o2 map (_._1) reduceLeft (minInputTerms(_, _))
         needsLessOperations(min_coefs_o1, min_coefs_o2)
     }
-    
-    val sorted_equalities = interesting_equalities sort by_least_outputvar_coef
-    
+
+    val sorted_equalities = interesting_equalities sortWith by_least_outputvar_coef
+
     sorted_equalities match {
       case Nil =>
         val newfs = FormulaSplit(Nil, non_equalities, remaining_disjunctions)
@@ -298,9 +298,9 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         var o1_coefs = o1 map (_._1)
         var o1_vars = o1 map (_._2)
         val gcd = APAInputGCD(o1_coefs).replaceList(input_assignments flatMap (_.extract)).simplified
-        
+
         gcd match {
-          case APAInputCombination(1, Nil) => 
+          case APAInputCombination(1, Nil) =>
             // Perfect !! We know that there is a solution.
             // Continue to CONTINUE_POINT
           case n =>
@@ -332,7 +332,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             } else {
               var (cond1, prog1) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeAllCoefficientsAreZero) :: rest_equalities ++ non_equalities) // Case where the coefficients are null.
               cond1 = cond1.assumeBefore(coefs_are_zero)
-              var (cond2, prog2) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeNotAllCoefficientsAreZero)  :: rest_equalities ++ non_equalities) //solve with the knowledge that not all the coefficients are null. 
+              var (cond2, prog2) = APASynthesis.solve(output_variables, APAEqualZero(pac.assumeNotAllCoefficientsAreZero)  :: rest_equalities ++ non_equalities) //solve with the knowledge that not all the coefficients are null.
               cond2 = cond2.assumeBefore(APANegation(coefs_are_zero))
               return APACaseSplit.optimized((cond1, prog1)::(cond2, prog2)::Nil)
             }
@@ -342,10 +342,10 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         // We find a solution to o1_coefs.o1_vars + 1 = 0
         // Then we know that by multiplying the first line by const_part, we obtain the general solution
         // Express the input variables by assignments
-        
-        val new_input_variables: List[List[InputVar]]= o1_vars.indices.toList map { _ => o1_vars.indices map { _ => getNewInputVar()}}
+
+        val new_input_variables: List[List[InputVar]]= o1_vars.indices.toList map { _ => o1_vars.indices.toList map { _ => getNewInputVar()}}
         addBezoutInputAssignment(new_input_variables, o1_coefs)
-        
+
         val first_line:List[APACombination] = new_input_variables.head map {
           case iv =>
             val p = APAInputCombination(0, (1, iv)::Nil)
@@ -380,12 +380,12 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             }
         }
         // We add the variables if they are needed.
-        //if(((new_assignments flatMap (_.input_variables)).removeDuplicates intersect new_input_variables) != Nil)
-          
+        //if(((new_assignments flatMap (_.input_variables)).distinct intersect new_input_variables) != Nil)
+
 
         //var new_equalities = rest_equalities
         //var new_nonequalities = non_equalities
-        val assignments = (o1_vars zip new_assignments) 
+        val assignments = (o1_vars zip new_assignments)
         assignments foreach {
           case (v, pac) => addOutputAssignment(v, pac)
             //val (new_eqs1, new_noneqs1) = partitionPAEqualZero(new_equalities map (_.replace(v, pac)))
@@ -399,7 +399,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         solveEqualities(newfs)
     }
   }
-  
+
   def setRemainingVariablesToZero(output_variables : List[OutputVar]):Unit = output_variables match {
     case Nil =>
     case y::q =>
@@ -413,7 +413,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                       setRemainingVariablesToZero(q)
       }
   }
-  
+
   // Returns (cond, l_left, l_right, l_remaining) such that:
   // l_left contains elements  (A, a) such that A <= a*v
   // l_right contains elements (b, B) such that b*v <= B
@@ -426,7 +426,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                                      result:       (List[APAFormula], List[(APACombination, APAInputTerm)], List[(APAInputTerm, APACombination)], List[APAEquation])
                                     )   :   Stream[(List[APAFormula], List[(APACombination, APAInputTerm)], List[(APAInputTerm, APACombination)], List[APAEquation])] =
       inequalities match {
-        case Nil => 
+        case Nil =>
           // At this split point, we can solve.
           Stream(result)
       case ((p@APAGreaterEqZero(pac@APACombination(c, o)))::q) =>
@@ -495,7 +495,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         }
       case APATrue()::q =>
         val (l_formulas, l_left, l_right, l_remaining)=result
-        getInequalitiesForVariable_aux(v, q, (l_formulas, l_left, l_right, l_remaining))  
+        getInequalitiesForVariable_aux(v, q, (l_formulas, l_left, l_right, l_remaining))
       case APAFalse()::q =>
         val (l_formulas, l_left, l_right, l_remaining)=result
         getInequalitiesForVariable_aux(v, q, (l_formulas, l_left, l_right, APAFalse()::l_remaining))
@@ -504,7 +504,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     }
     getInequalitiesForVariable_aux(v, inequalities, (Nil, Nil, Nil, Nil))
   }
-  
+
   /** Solve them, so now we only have non-equalities */
   /** The simplification of inequalities can generate new equalities, so we handle them. */
   def solveEquations(data: FormulaSplit):APASplit = {
@@ -527,17 +527,17 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         return APACaseSplit.optimized(solutions)
       }
       assert(remaining_disjunctions.isEmpty)
-      
+
       /** Get only inequalities, plus maybe with "False" in other */
       val (equalities2, inequalities, is_consistent) = partitionPAGreaterEqZero(non_equalities)
       // equalities2 should be empty given that new_non_equalities cannot contain equalities
       assert(equalities2 == Nil)
       if(!is_consistent) return APAFalseSplit()
-  
+
       /** Remove redundant inequalities, maybe generating equalities */
       //val (inequalities3, equalities3, is_consistent3) = removeRedundancies(inequalities)
       val (inequalities3, equalities3, is_consistent3) = (inequalities, Nil, true)
-      
+
       if(!is_consistent3) return APAFalseSplit()
       if(equalities3 != Nil)
         return solveEqualities(FormulaSplit(equalities3, inequalities3, Stream.empty))
@@ -581,7 +581,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
         addPrecondition(APAConjunction(current_inequalities))
         return APAEmptySplit()
       }
-      
+
       // Now at this point, all variables are bounded on both sides.
       // Let's find the one for which the LCM of its coefficients is the smallest.
       // (Number of splits, min_coef)
@@ -602,17 +602,17 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
       }
       def min_coef(i1:((Int, APAInputTerm), OutputVar), i2:((Int, APAInputTerm), OutputVar)) : ((Int, APAInputTerm), OutputVar) = (i1, i2) match {
         case (t1@((split1, k1), v1), t2@((split2, k2), v2)) =>
-          if(split1 < split2) t1 else (if(split1==split2) (if(needsLessOperations(k1, k2)) t1 else t2) else t2) 
+          if(split1 < split2) t1 else (if(split1==split2) (if(needsLessOperations(k1, k2)) t1 else t2) else t2)
       }
       val (_, y) = output_variables_with_min_coefs.reduceRight(min_coef(_, _))
-      
+
       getInequalitiesForVariable(y, current_inequalities) match {
         case Stream((Nil, l_left, l_right, l_remaining)) => // The signs are fully determined !!
           val (eqs, ineqs, consistency) = partitionPAGreaterEqZero(l_remaining)
           if(eqs != Nil) throw new Exception("Support for equalities appearing after split is not supported (yet)")
           current_inequalities = ineqs
           is_consistent4 &&= consistency
-  
+
           if(l_right.size <= l_left.size) {
             val upper_bounds = l_right map { case (b , pac) => APADivision(pac, b).simplified }
             addOutputAssignment(y, APAMinimum(upper_bounds))
@@ -623,11 +623,11 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
             delOutputVar(y)
           }
           val prog_needed_afterwards = output_variables != Nil
-  
+
           // OptimizeMe : If a is smaller than b, use it instead of a.
-          var output_variables_used = (output_variables_encountered).removeDuplicates
-          var input_variables_used = (input_variables_encountered).removeDuplicates
-          
+          var output_variables_used = (output_variables_encountered).distinct
+          var input_variables_used = (input_variables_encountered).distinct
+
           // We don't care about pairs of equations that are trivial to reduce.
           l_left foreach { case (eqA, a) =>
             l_right foreach { case (b, eqB) =>
@@ -637,7 +637,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
           }
           val l_left_filtered  = l_left  remove (_._2==APAInputCombination(1, Nil))
           val l_right_filtered = l_right remove (_._1==APAInputCombination(1, Nil))
-          
+
           val lcm_value = APAInputLCM((l_left_filtered map (_._2)) ++ (l_right_filtered map (_._1))).simplified
           val lcm_int:Option[Int] = lcm_value match {
             case APAInputCombination(i, Nil) => Some(i)
@@ -654,7 +654,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                   APAInputCombination(var_lcm)
               }
           }
-          
+
           val l_left_normalized = l_left_filtered map {
             case (eqA, a) =>
               assert(a.isPositive)
@@ -665,7 +665,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
               assert(b.isPositive)
               eqB*(lcm_expr/b)
           }
-          
+
           var collected_new_input_variables:List[InputVar] = Nil
           val collected_new_equations:List[APAEquation] = l_right_normalized flatMap { case eqB =>
             val new_mod_bounds = l_left_normalized map { case eqA => (eqB - eqA) } remove {
@@ -687,10 +687,10 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
                 val k_expr = APAInputCombination(0, (1, k)::Nil)
                 assert(k_expr.isPositiveZero)
                 val new_ineqs = new_mod_bounds map {
-                  case mod_bound => 
+                  case mod_bound =>
                     val result = APACombination(k_expr, Nil) <= mod_bound
                     result
-                } 
+                }
                 val new_eq =   eqB === APACombination(k_expr, (lcm_value, ov)::Nil)
                 new_eq::new_ineqs
             }
@@ -704,7 +704,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
               }
             case (Nil, t) => throw new Error("How could this happen ? Both variables should be Nil, but the second one is "+t)
             case (t, Nil) => throw new Error("How could this happen ? Both variables should be Nil, but the first one is "+t)
-            case (_,   _) => 
+            case (_,   _) =>
               val (condition, program) = APASynthesis.solve(collected_new_equations ++ current_inequalities)
               if(prog_needed_afterwards) {
                 APAForSplit(collected_new_input_variables, APAInputCombination(0), lcm_value-APAInputCombination(1), condition, program)
@@ -752,7 +752,7 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     }
   }
 
-  
+
   def solve():(APACondition, APAProgram) = {
     /************* Main algorithm *************** */
     //***** Step 1: There are no quantifiers by construction. Nothing to do
@@ -760,19 +760,19 @@ class APASynthesis(equations: FormulaSplit, input_variables_initial:List[InputVa
     // Convert "Greater" to "GreaterEq"
     // Simplify everything
     //val equations2 = equations.simplified //simplifyEquations(equations)
-    
+
     //***** Step 3 : converting to DNF : Nothing to do, the argument is a conjunction
     //***** Step 4 : Case Splitting. Nothing to do.
     //***** Step 5 : Removing equalities
-    
+
     // All equations without output vars go directly to the global precondition
-    //val (eq_with_outputvars, eq_without_outputvars) = equations2 partition (_.has_output_variables) 
+    //val (eq_with_outputvars, eq_without_outputvars) = equations2 partition (_.has_output_variables)
     //addPrecondition(APAConjunction(eq_without_outputvars))
     // Retrieve all equalities
     //var (equalities, non_equalities) = partitionPAEqualZero(eq_with_outputvars)
-    
+
     val result = solveEquations(equations)
-    
+
     // Looking for variables bounded only on one side.
     result match {
       case APAFalseSplit() =>

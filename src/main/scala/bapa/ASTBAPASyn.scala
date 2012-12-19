@@ -71,7 +71,7 @@ object ASTBAPASyn {
       val i1n = bapaInttoArithInt(i)
       Arithmetic.Equals(Arithmetic.Modulo(i1n, Arithmetic.IntLit(c)), Arithmetic.IntLit(0))
     }
-    case _ => scala.Predef.error("Not arithmetic formula !!! " + a)
+    case _ => scala.sys.error("Not arithmetic formula !!! " + a)
   }
 
 
@@ -87,7 +87,7 @@ object ASTBAPASyn {
       val i1n = bapaInttoArithInt(i1)
       Arithmetic.Times(Arithmetic.IntLit(c), i1n)
     }
-    case _ => scala.Predef.error("Not arithmetic formula !!! " + i)
+    case _ => scala.sys.error("Not arithmetic formula !!! " + i)
   }
 
   def simplifySetAssignmentList(list: List[SetAssignment], keep: List[String]): List[SetAssignment] = {

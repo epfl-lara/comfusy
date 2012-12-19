@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+
+imports () {
+  cat <<EOM
+import synthesis.Definitions._
+val answer = choose((x: Int) => x > 41)
+EOM
+}
+
+sbt package
+
+pluginjar=$(ls target/scala-2.10*/*.jar)
+
+/scala/inst/210/bin/scala -i <(imports) -Xplugin:$pluginjar -classpath $pluginjar

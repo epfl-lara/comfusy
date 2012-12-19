@@ -51,7 +51,7 @@ object Arithmetic {
       case (_, And(fs)) => And(left :: fs)
       case (_, _) => And(List(left,right))
     }
-    def unapply(and: And): Option[List[Formula]] = 
+    def unapply(and: And): Option[List[Formula]] =
       Some(and.formulas)
   }
   object Or {
@@ -68,7 +68,7 @@ object Arithmetic {
       case (_, Or(fs)) => Or(left :: fs)
       case (_, _) => Or(List(left,right))
     }
-    def unapply(or: Or): Option[List[Formula]] = 
+    def unapply(or: Or): Option[List[Formula]] =
       Some(or.formulas)
   }
   object Plus {
@@ -85,7 +85,7 @@ object Arithmetic {
       case (t, IntLit(0)) => t
       case (_, _) => Plus(List(left,right))
     }
-    def unapply(plus: Plus): Option[List[Term]] = 
+    def unapply(plus: Plus): Option[List[Term]] =
       Some(plus.terms)
   }
   object Times {
@@ -106,7 +106,7 @@ object Arithmetic {
       case (t, IntLit(-1)) => Neg(t)
       case (_, _) => Times(List(left,right))
     }
-    def unapply(times: Times): Option[List[Term]] = 
+    def unapply(times: Times): Option[List[Term]] =
       Some(times.terms)
   }
 
@@ -185,7 +185,7 @@ object Arithmetic {
       case Modulo(l,r) => Modulo(travT(l), travT(r))
       case Min(ts) => Min(ts.map(travT(_)))
     }
- 
+
     // actually, we force this first, or if the variables don't appear we'll be
     // in trouble.
     for(v <- varSet) {
@@ -232,13 +232,13 @@ object Arithmetic {
       case GreaterThan(l, r) => GreaterEqThan(linearize(Plus(Minus(l,r), IntLit(-1))), IntLit(0))
       case GreaterEqThan(l, r) => GreaterEqThan(linearize(Minus(l,r)), IntLit(0))
     }
-  
+
     def linearize(term: Term): Term = {
       // removes all minus and neg terms by pushing them into the constants.
       def noNegs(t: Term): Term = t match {
         case Neg(Neg(t)) => noNegs(t)
         case Neg(IntLit(v)) => IntLit(-v)
-        case Neg(v: Variable) => Times(IntLit(-1), v) 
+        case Neg(v: Variable) => Times(IntLit(-1), v)
         case Neg(Plus(ts)) => Plus(ts.map((tm: Term) => noNegs(Neg(tm))))
         case Neg(Times(ts)) => noNegs(Times(Neg(ts.head) :: ts.tail))
         case Neg(Minus(l,r)) => noNegs(Minus(r,l))
@@ -253,7 +253,7 @@ object Arithmetic {
         case Min(ts) => Min(ts.map(noNegs(_)))
         case IntLit(_) | Variable(_) => t
       }
-  
+
       // distributes multiplications over sums. assumes that everything is
       // already products or sums (ie. noNegs was applied and there are no mins,
         // divs and mods)
@@ -270,7 +270,7 @@ object Arithmetic {
         case Plus(ts) => Plus(ts.map(dist(_)))
         case _ => term
       }
-  
+
       // tries to simplify a term (not recursively)
       def simpler(term: Term): Term = term match {
         case Plus(ts0) => {
@@ -283,9 +283,9 @@ object Arithmetic {
             if(cstSum != 0)
             Plus(IntLit(cstSum) :: noCst)
           else
-            Plus(noCst)        
+            Plus(noCst)
         }
-  
+
         case Times(ts0) => {
           val ts = ts0.map(simpler(_))
             val cstProd = ts.map(t => t match {
@@ -298,12 +298,12 @@ object Arithmetic {
           else if(cstProd != 1)
             Times(IntLit(cstProd) :: noCst)
           else
-            Times(noCst)        
+            Times(noCst)
         }
-  
+
         case _ => term
       }
-  
+
       simpler(dist(noNegs(term)))
     }
 
@@ -333,12 +333,12 @@ object Arithmetic {
       case Plus(ts) => ts.forall(iqlt(_))
       case Minus(l,r) => iqlt(l) && iqlt(r)
       case Times(ts) => {
-        val varSets: List[Set[VariableID]] = ts.map(variablesOf(_)).map(_ ** restricted)
-        
+        val varSets: List[Set[VariableID]] = ts.map(variablesOf(_)).map(_ & restricted)
+
         var ok = true
-        for(val vs1 <- varSets) {
-          for(val vs2 <- varSets) {
-            if(!(vs1 eq vs2) && !(vs1 ** vs2).isEmpty) {
+        for(vs1 <- varSets) {
+          for(vs2 <- varSets) {
+            if(!(vs1 eq vs2) && !(vs1 & vs2).isEmpty) {
               ok = false
               //println("CE: " + vs1 + " ... " + vs2)
             }
@@ -381,7 +381,7 @@ object Arithmetic {
             sums(varnme) = sums.getOrElse(varnme,0) + coef
           }
           val cstcoef = sums.getOrElse("", 0)
-          sums.removeKey("")
+          sums -= ""
           Some(cstcoef,sums.toList)
         }
       }
@@ -401,21 +401,21 @@ object Arithmetic {
   private val GESTR  = " \u2265 "
   private val TRUESTR  = "\u22A4"
   private val FALSESTR = "\u22A5"
-  
+
   private def pp(f: Formula): String = f match {
     case And(fs) => fs.map(pp(_)).mkString("(", ANDSTR, ")")
     case Or(fs)  => fs.map(pp(_)).mkString("(", ORSTR, ")")
     case Not(f)  => NOTSTR + pp(f)
     case True()  => TRUESTR
     case False() => FALSESTR
-    case Equals(l,r) => "(" + pp(l) + EQSTR + pp(r) + ")" 
-    case NotEquals(l,r) => "(" + pp(l) + NESTR + pp(r) + ")" 
-    case LessThan(l,r) => "(" + pp(l) + LTSTR + pp(r) + ")" 
-    case LessEqThan(l,r) => "(" + pp(l) + LESTR + pp(r) + ")" 
-    case GreaterThan(l,r) => "(" + pp(l) + GTSTR + pp(r) + ")" 
-    case GreaterEqThan(l,r) => "(" + pp(l) + GESTR + pp(r) + ")" 
+    case Equals(l,r) => "(" + pp(l) + EQSTR + pp(r) + ")"
+    case NotEquals(l,r) => "(" + pp(l) + NESTR + pp(r) + ")"
+    case LessThan(l,r) => "(" + pp(l) + LTSTR + pp(r) + ")"
+    case LessEqThan(l,r) => "(" + pp(l) + LESTR + pp(r) + ")"
+    case GreaterThan(l,r) => "(" + pp(l) + GTSTR + pp(r) + ")"
+    case GreaterEqThan(l,r) => "(" + pp(l) + GESTR + pp(r) + ")"
   }
-  
+
   private def pp(t: Term): String = t match {
     case Variable(id) => id.toString
     case IntLit(v) => v.toString
@@ -432,7 +432,7 @@ object Arithmetic {
     // the main problem is that we need to encode things like division, min and
     // modulo. We add "local equalities" for that.
     lazy val varsInForm = variablesOf(form)
-    
+
     val prefixUses = new scala.collection.mutable.HashMap[String,Int]
     def freshName(prefix: String): String = {
       var next = (prefixUses.getOrElse(prefix, -1) + 1)
@@ -499,7 +499,7 @@ object Arithmetic {
       case GreaterThan(l,r) =>"(> " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
       case GreaterEqThan(l,r) =>"(>= " + t2s(flatten(l)) + ' ' + t2s(flatten(r)) + ')'
     }
-  
+
     def t2s(trm: Term): String = trm match {
       case Variable(id) => id.toString
       case IntLit(v) => if(v < 0) "(~ " + (-v).toString + ')' else v.toString
@@ -555,7 +555,7 @@ object Arithmetic {
   def isSat(form: Formula): (Option[Boolean],Option[Map[String,Int]]) = {
     try {
       val varsInForm = variablesOf(form)
-      val process = java.lang.Runtime.getRuntime.exec("z3 -smt -m -in")
+      val process = java.lang.Runtime.getRuntime.exec("z3 -smt -in")
       val out     = new java.io.PrintStream(process.getOutputStream)
       val smt = toSMTBenchmark(form)
       out.println(smt)
@@ -570,11 +570,11 @@ object Arithmetic {
         line = in.readLine
       }
       lines = lines.reverse
-     
+
       var ass = Map.empty[String,Int]
       var status: Option[Boolean] = None
-  
-      for (val l <- lines) {
+
+      for (l <- lines) {
         if(l.contains(" -> ")) {
           val spl = l.split(" -> ")
           if(varsInForm.contains(spl(0)))

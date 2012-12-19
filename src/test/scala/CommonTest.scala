@@ -3,7 +3,7 @@ package synthesis
 import org.scalatest._
 import org.scalatest.matchers._
 
-class CommonTest extends Spec with ShouldMatchers {
+class CommonTest extends FunSpec with ShouldMatchers {
   import Common._
 
   describe("Common functions") {
@@ -47,10 +47,10 @@ class CommonTest extends Spec with ShouldMatchers {
       replaceElementAtIndexByCoef(List((0, 1), (1, 5), (2, 4), (3, 6)), 2, 1) should equal (List(1, 5, 1, 6))
     }
   }
-  
+
   describe("bezout function") {
     it("should solve the simple bezout identity") {
-      computing_mode = OTBezout() 
+      computing_mode = OTBezout()
       bezout(6) should equal (Nil)
       bezout(6, 3) should equal (List(-2))
       bezout(-18, 6) should equal (List(3))
@@ -85,7 +85,7 @@ class CommonTest extends Spec with ShouldMatchers {
       }
     }
     it("should solve the more complex bezout identity") {
-      computing_mode = OTBezout() 
+      computing_mode = OTBezout()
       bezoutWithBase(6) should equal (Nil)
       bezoutWithBase(6, 3) should equal (List(List(-2)))
       bezoutWithBase(-18, 6) should equal (List(List(3)))
@@ -143,7 +143,7 @@ class CommonTest extends Spec with ShouldMatchers {
     }
   }
   describe("new bezout functions") {
-    computing_mode = MMBezout() 
+    computing_mode = MMBezout()
     it("should solve the advanced euclid algorithm") {
       {val (u, v, k) = advancedEuclid(19*13, 19*17)
       k should equal (19)
@@ -197,13 +197,13 @@ class CommonTest extends Spec with ShouldMatchers {
         val List(_, List(u1, v1, w1), List(u2, v2, w2)) = bezoutWithBaseMM(0, input)
         10*u1+15*v1+6*w1 should equal (0)
         10*u2+15*v2+6*w2 should equal (0)
-        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true) 
+        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true)
       }
       { val input = List(19*13, -19*17, 13*17)
         val List(_, List(u1, v1, w1), List(u2, v2, w2)) = bezoutWithBase(0, input)
         19*13*u1-19*17*v1+13*17*w1 should equal (0)
         19*13*u2-19*17*v2+13*17*w2 should equal (0)
-        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true) 
+        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true)
       }
     }
     it("should find bases even if one element is null") {
@@ -228,7 +228,7 @@ class CommonTest extends Spec with ShouldMatchers {
         val List(List(u1, v1, w1, z1), List(u2, v2, w2, z2), List(u3, v3, w3, z3)) = bezoutWithBase(input)
         10*u1+15*v1+6*w1 should equal (0)
         10*u2+15*v2+6*w2 should equal (0)
-        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true) 
+        ((u1*v2-u2*v1 != 0) || (w1*v2-w2*v1 != 0) || (u1*w2-u2*w1 != 0)) should be (true)
       }*/
     }
     it("should flatten variables correctly") {
@@ -240,10 +240,10 @@ class CommonTest extends Spec with ShouldMatchers {
       try {
         val m = mi.next
         throw new Error("There should have been an exception")
-      } catch {
-        case e =>
       }
-      
+      catch {
+        case e: Exception =>
+      }
     }
   }
 }

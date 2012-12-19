@@ -6,7 +6,7 @@ import scala.collection.immutable.Set
 
 import scala.tools.nsc.transform.TypingTransformers
 
-import scala.tools.nsc.util.NoPosition
+// import scala.tools.nsc.util.NoPosition
 
 trait ChooseTransformer
   extends TypingTransformers
@@ -26,9 +26,9 @@ trait ChooseTransformer
       println(str.toString)
   }
 
-  private lazy val synthesisPackage: Symbol = definitions.getModule("synthesis")
-  private lazy val synthesisDefinitionsModule: Symbol = definitions.getModule("synthesis.Definitions")
-  private lazy val immutableSetTraitSymbol = definitions.getClass("scala.collection.immutable.Set")
+  private lazy val synthesisPackage: Symbol = rootMirror.getRequiredModule("synthesis")
+  private lazy val synthesisDefinitionsModule: Symbol = rootMirror.getRequiredModule("synthesis.Definitions")
+  private lazy val immutableSetTraitSymbol = rootMirror.getRequiredClass("scala.collection.immutable.Set")
 
   /** The actual rewriting function is the following. */
   def transformChooseCalls(unit: CompilationUnit, emitWarnings: Boolean): Unit =
@@ -40,12 +40,12 @@ trait ChooseTransformer
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose" && predicate.vparams(0).tpt.tpe == definitions.IntClass.tpe) => {
           // SANITY CHECKS
           var foundErrors = false
-          // DEBUG reporter.info(a.pos, "here!", true) 
+          // DEBUG reporter.info(a.pos, "here!", true)
           val Function(funValDefs, funBody) = predicate
 
           // we check that we're only synthesizing integers, and collect the
           // set of input variables
-          // for (val valDef <- funValDefs) {
+          // for (valDef <- funValDefs) {
           //   if(valDef.tpt.tpe != definitions.IntClass.tpe) {
           //     reporter.error(valDef.pos, "unsupported type in call to synthesizer: " + valDef.tpt.tpe)
           //     foundErrors = true
@@ -97,7 +97,7 @@ trait ChooseTransformer
             isSat(completeFormula) match {
               case (Some(true), Some(ass)) => {
                 var wm = "Synthesis predicate has multiple solutions for variable assignment: "
-                wm = wm + ass.keys.filter(k => !toMap.keys.contains(k) && !fromMap.keys.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
+                wm = wm + ass.keys.filter(k => !toMap.keys.toList.contains(k) && !fromMap.keys.toList.contains(k)).toList.map(k => k + " = " + ass(k)).mkString(", ")
                 wm = wm + "\n"
                 wm = wm + "  Solution 1: " + outVars.toList.map(k => k + " = " + ass(k)).mkString(", ") + "\n"
                 wm = wm + "  Solution 2: " + outVars.toList.map(k => k + " = " + ass(toMap(k))).mkString(", ") + "\n"
@@ -138,14 +138,14 @@ trait ChooseTransformer
               case Some(_) => ; // we would already have a warning.
             }
           }
-          
+
           // CODE GENERATION
           var initialMap: SymbolMap = Map.empty
           extractedSymbols.foreach(sym => {
             initialMap = initialMap + (sym.name.toString -> sym)
           })
           val codeGen = new CodeGenerator(unit, currentOwner, initialMap, emitWarnings, a.pos)
-          val generated = codeGen.apaProgramToCode(apaPrec, apaProg, true) 
+          val generated = codeGen.apaProgramToCode(apaPrec, apaProg, true)
 
           typer.typed(atOwner(currentOwner) {
             generated
@@ -160,7 +160,7 @@ trait ChooseTransformer
 
           val scrutSym = selector match {
             case i @ Ident(_) if i.symbol.isStable => i.symbol
-            case _ => currentOwner.newValue(selector.pos, unit.fresh.newName(selector.pos, "scrutinee")).setInfo(selector.tpe)
+            case _ => currentOwner.newValue(unit.freshTermName("scrutinee"), selector.pos).setInfo(selector.tpe)
           }
           val scrutName: String = scrutSym.name.toString
 
@@ -175,7 +175,7 @@ trait ChooseTransformer
                   case _ => ;
                 }
                 val frm = normalized(Equals(formula, Variable(scrutName)))
-                
+
                 val outVarSyms: List[Symbol] = outVars.toList
                 val realOutVarList: List[String] = outVarSyms.map(_.name.toString) ::: wildcards.toList
                 val realOutVarSet: Set[String] = Set.empty ++ realOutVarList
@@ -202,8 +202,8 @@ trait ChooseTransformer
                       cse.body
                     } else {
                       // we build new symbols
-                      val newOutSyms = outVarSyms.map(s => 
-                        currentOwner.newValue(s.pos, unit.fresh.newName(s.pos, s.name.toString)).setInfo(definitions.IntClass.tpe)
+                      val newOutSyms = outVarSyms.map(s =>
+                        currentOwner.newValue(unit.freshTermName(s.name.toString), s.pos).setInfo(definitions.IntClass.tpe)
                       )
                       //val wcSyms = wildcards.toList.map(w =>
                       //  currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "wc$")).setInfo(definitions.IntClass.tpe)
@@ -222,14 +222,14 @@ trait ChooseTransformer
                         )
                       } else {
                         val outVarCount = outVarSyms.size
-                        val tupleHolderSym = currentOwner.newValue(cse.pat.pos, unit.fresh.newName(cse.pat.pos, "t")).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
-                        
+                        val tupleHolderSym = currentOwner.newValue(unit.freshTermName("t"), cse.pat.pos).setInfo(definitions.tupleType(realOutVarList.map(n => definitions.IntClass.tpe)))
+
                         Block(
                           ValDef(tupleHolderSym, computedTuple) :: (
-                          for(val c <- 0 until outVarCount) yield 
+                          for(c <- 0 until outVarCount) yield
                             ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1))))
                           ).toList, // :::
-//                          for(val c <- 0 until wcSyms.size) :: (
+//                          for(c <- 0 until wcSyms.size) :: (
 //                            ValDef(wcSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1+outVarCount))))
 //                          ).toList,
                           symSubst(cse.body)
@@ -279,7 +279,7 @@ trait ChooseTransformer
 
             // checks for reachability
             var foundUnreachable = false
-            for(val c <- 0 until patternConditionPairs.size - 1) {
+            for(c <- 0 until patternConditionPairs.size - 1) {
               if(!foundUnreachable) {
                 val theOne = patternConditionPairs(c+1)
                 val reachForm = And(Not(Or(patternConditionPairs.take(c + 1).map(_._2))), theOne._2)
@@ -364,9 +364,9 @@ trait ChooseTransformer
               PASynthesis.PAFalse()
             }
           }
-          if (foundErrors) 
+          if (foundErrors)
             return a
-          
+
           dprintln(mikaelStyleFormula)
 
           val (paPrec,paProg) = PASynthesis.solve(linOutVars.map(PASynthesis.OutputVar(_)), mikaelStyleFormula)
@@ -398,7 +398,7 @@ trait ChooseTransformer
           // CODE GENERATION
           var symbolMap: SymbolMap = Map.empty
           // we put in the 'c' symbols
-          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
           inIntVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
           inSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
 
@@ -413,29 +413,29 @@ trait ChooseTransformer
             dprintln(paPrec)
             dprintln(paProg)
             val mikiFun: Tree = codeGen.programToCode(paPrec, paProg, true)
-            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, nme)).setInfo(definitions.IntClass.tpe) ) } )
+            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
 
             val lovss = linOutVars.size
             if(lovss == 1) {
               List(ValDef(symbolMap(linOutVars.head), mikiFun))
             } else {
-              val tempTupleSym = currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, "tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
+              val tempTupleSym = currentOwner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
               ValDef(tempTupleSym, mikiFun) :: (
-                for(val c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
+                for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
             }
           }
 
           outSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
-          val concludingAssigns: List[Tree] = (for(val ass <- asss) yield {
+          val concludingAssigns: List[Tree] = (for(ass <- asss) yield {
             if(!symbolMap.isDefinedAt(ass.setName)) {
-              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(NoPosition, unit.fresh.newName(NoPosition, ass.setName + "$")).setInfo(instantiatedSetType))
+              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(unit.fresh.newName(ass.setName + "$")).setInfo(instantiatedSetType))
             }
             ass match {
               case bapa.ASTBAPASyn.Simple(nme, setExpr) => ValDef(symbolMap(nme), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
               case bapa.ASTBAPASyn.Take(nme, cnt, setExpr) => {
                 ValDef(symbolMap(nme),
                   Apply(
-                    Select(Select(Ident(synthesisPackage), synthesisDefinitionsModule), definitions.getMember(synthesisDefinitionsModule, "takeFromSet")),
+                    Select(Select(Ident(synthesisPackage), synthesisDefinitionsModule), definitions.termMember(synthesisDefinitionsModule, "takeFromSet")),
                     List(codeGen.setIntTermToCode(symbolMap, cnt, underlyingElementTypeTree), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))
                   )
                 )
@@ -444,15 +444,15 @@ trait ChooseTransformer
             }
           }).toList
 
-           
+
 
           typer.typed(atOwner(currentOwner) {
             Block(
-              preliminaryCardAssigns ::: 
+              preliminaryCardAssigns :::
               mikiProgram :::
               concludingAssigns :::
               Nil,
-              if(outSetVarList.size == 1) { 
+              if(outSetVarList.size == 1) {
                 Ident(outSetVarList(0))
               } else {
                 New(
@@ -462,7 +462,7 @@ trait ChooseTransformer
               }
             )
           })
-        } 
+        }
 
         case a @ Apply(TypeApply(Select(s: Select, n), _), rhs @ List(predicate: Function)) if(synthesisDefinitionsModule == s.symbol && n.toString == "choose") => {
           /*
@@ -485,7 +485,7 @@ trait ChooseTransformer
           args(0) match {
             case TypeRef(_, ss, Nil) if ss == definitions.getClass("scala.Predef.String") => println("yes yes yes yes")
           }
-          
+
           */
           reporter.error(predicate.vparams.head.pos, "Unsupported type in call to ``choose''.")
           super.transform(a)
@@ -596,7 +596,7 @@ trait ChooseTransformer
         case False() => PASynthesis.PAFalse()
         case Equals(term, IntLit(0)) => PASynthesis.PAEqualZero(makePACombination(term))
         case GreaterEqThan(term, IntLit(0)) => PASynthesis.PAGreaterEqZero(makePACombination(term))
-        case _ => scala.Predef.error("Unexpected formula in format conversion: " + f)
+        case _ => scala.sys.error("Unexpected formula in format conversion: " + f)
       }
 
       def makePACombination(term: Term): PASynthesis.PACombination = term match {
@@ -612,7 +612,7 @@ trait ChooseTransformer
             }
           }
 
-          PASynthesis.PACombination(cstTerm, inVarsAff.reverse.removeDuplicates, outVarsAff.reverse.removeDuplicates)
+          PASynthesis.PACombination(cstTerm, inVarsAff.reverse.distinct, outVarsAff.reverse.distinct)
         }
         case _ => throw EscapeException()
       }
@@ -624,7 +624,7 @@ trait ChooseTransformer
       }
     }
 
-    def formulaToAPAFormula2(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = 
+    def formulaToAPAFormula2(formula: Formula, outVarSet: Set[String]): Option[APAFormula] =
     if(!isQuasiLinear(formula, outVarSet)) {
       None
     } else {
@@ -657,7 +657,7 @@ trait ChooseTransformer
             case None => {
               val mapped = ts.map(tryInTerm(_))
               mapped.count(_.isEmpty) match {
-                case 0 => scala.Predef.error("Something went wrong.")
+                case 0 => scala.sys.error("Something went wrong.")
                 case 1 => {
                   val inTerm: APAInputTerm = mapped.filter(_.isDefined).map(_.get).reduceLeft[APAInputTerm]((x:APAInputTerm,y:APAInputTerm) => APAInputMultiplication(x :: y :: Nil).simplified)
                   // .get should never fail !
@@ -669,9 +669,9 @@ trait ChooseTransformer
             }
           }
         }
-        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
-        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
-        case Min(ts) => scala.Predef.error("Mod should not occur.")
+        case Div(t1, t2) => scala.sys.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.sys.error("Mod should not occur.")
+        case Min(ts) => scala.sys.error("Mod should not occur.")
       }):APACombination).simplified
 
       def tryInTerm(term: Term): Option[APAInputTerm] = (term match {
@@ -708,17 +708,17 @@ trait ChooseTransformer
             }
           }
         }
-        case Div(t1, t2) => scala.Predef.error("Div should not occur.")
-        case Modulo(t1, t2) => scala.Predef.error("Mod should not occur.")
-        case Min(ts) => scala.Predef.error("Mod should not occur.")
+        case Div(t1, t2) => scala.sys.error("Div should not occur.")
+        case Modulo(t1, t2) => scala.sys.error("Mod should not occur.")
+        case Min(ts) => scala.sys.error("Mod should not occur.")
       }).map(_.simplified)
-      
+
       try {
         Some(f2apaf(formula))
       } catch {
-        case EscapeException() => scala.Predef.error("was quasi-linear or not??"); None
+        case EscapeException() => scala.sys.error("was quasi-linear or not??"); None
       }
-    } 
+    }
 
 /*    def formulaToAPAFormula(formula: Formula, outVarSet: Set[String]): Option[APAFormula] = {
       case class EscapeException() extends Exception
@@ -730,7 +730,7 @@ trait ChooseTransformer
         case False() => APAFalse()
         case Equals(term, IntLit(0)) => APAEqualZero(makeAPACombination(term))
         case GreaterEqThan(term, IntLit(0)) => APAGreaterEqZero(makeAPACombination(term))
-        case _ => scala.Predef.error("Unexpected formula in APA format conversion: " + f)
+        case _ => scala.sys.error("Unexpected formula in APA format conversion: " + f)
       }
 
       def makeAPACombination(term: Term): APACombination = term match {
@@ -746,7 +746,7 @@ trait ChooseTransformer
             }
           }
 
-          APACombination(APAInputCombination(cstTerm, inVarsAff.reverse.removeDuplicates), outVarsAff.reverse.removeDuplicates)
+          APACombination(APAInputCombination(cstTerm, inVarsAff.reverse.distinct), outVarsAff.reverse.distinct)
         }
         case _ => throw EscapeException()
       }

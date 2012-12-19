@@ -6,6 +6,8 @@ trait ArithmeticExtractors {
   import global._
   import global.definitions._
 
+  lazy val PLUSPLUS: TermName = encode("++")
+
   //import scala.collection.mutable.Set
 
   object ExTrueLiteral {
@@ -160,7 +162,7 @@ trait ArithmeticExtractors {
 
   object ExUnion {
     def unapply(tree: Tree): Option[(Tree,Tree)] = tree match {
-      case Apply(Select(lhs, n), List(rhs)) if (n == nme.PLUSPLUS) => Some((lhs,rhs))
+      case Apply(Select(lhs, n), List(rhs)) if (n == PLUSPLUS) => Some((lhs,rhs))
       case _ => None
     }
   }
@@ -179,7 +181,7 @@ trait ArithmeticExtractors {
     }
   }
 
-  private lazy val setTraitSym = definitions.getClass("scala.collection.immutable.Set")
+  private lazy val setTraitSym = rootMirror.getRequiredClass("scala.collection.immutable.Set")
 
   object ExSetIdentifier {
     def unapply(tree: Tree): Option[Ident] = tree match {
@@ -207,10 +209,11 @@ trait ArithmeticExtractors {
     }
   }
 
-  private lazy val synthModule    = definitions.getModule("synthesis") 
-  private lazy val synthDefModule = definitions.getModule("synthesis.Definitions")
+  private lazy val synthModule    = rootMirror.getRequiredModule("synthesis")
+  private lazy val synthDefModule = rootMirror.getRequiredModule("synthesis.Definitions")
 
   object ExExGeneric {
+    val SELECTOR_DUMMY_NAME = newTermName(nme.SELECTOR_DUMMY)
     def ua(tree: Tree, opName: Name) : Option[(Tree,Tree)] = tree match {
       case UnApply(
         Apply(
@@ -219,7 +222,7 @@ trait ArithmeticExtractors {
               Select(i: Ident, n1),
               n2),
             n3),
-          List(Ident(nme.SELECTOR_DUMMY)))
+          List(Ident(SELECTOR_DUMMY_NAME)))
         , t1 :: t2 :: Nil) if (
            i.symbol == synthModule
         && n1 == synthDefModule.name
