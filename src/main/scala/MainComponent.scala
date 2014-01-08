@@ -15,7 +15,7 @@ class MainComponent(val global: Global, val pluginInstance: SynthesisPlugin)
 
   val phaseName = pluginInstance.name
 
-  var fresh: scala.tools.nsc.util.FreshNameCreator = null
+  var fresh: scala.reflect.internal.util.FreshNameCreator = null
 
   protected def stopIfErrors: Unit = {
     if (reporter.hasErrors) {

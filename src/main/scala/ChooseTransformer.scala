@@ -15,6 +15,8 @@ trait ChooseTransformer
   self: MainComponent =>
   import global._
 
+  def tupleField(n: Int, j: Int): TermSymbol = definitions.getMemberValue(definitions.TupleClass(n), nme.productAccessorName(j))
+
   private val SHOWDEBUGINFO = false
   private def dprintln(str: Any): Unit = {
     if(SHOWDEBUGINFO)
@@ -227,10 +229,10 @@ trait ChooseTransformer
                         Block(
                           ValDef(tupleHolderSym, computedTuple) :: (
                           for(c <- 0 until outVarCount) yield
-                            ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1))))
+                            ValDef(newOutSyms(c), Select(Ident(tupleHolderSym), tupleField(realOutVarList.size, (c+1))))
                           ).toList, // :::
 //                          for(c <- 0 until wcSyms.size) :: (
-//                            ValDef(wcSyms(c), Select(Ident(tupleHolderSym), definitions.tupleField(realOutVarList.size, (c+1+outVarCount))))
+//                            ValDef(wcSyms(c), Select(Ident(tupleHolderSym), tupleField(realOutVarList.size, (c+1+outVarCount))))
 //                          ).toList,
                           symSubst(cse.body)
                         )
@@ -421,7 +423,7 @@ trait ChooseTransformer
             } else {
               val tempTupleSym = currentOwner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
               ValDef(tempTupleSym, mikiFun) :: (
-                for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), definitions.tupleField(lovss, c+1)))).toList
+                for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), tupleField(lovss, c+1)))).toList
             }
           }
 
@@ -558,10 +560,15 @@ trait ChooseTransformer
         }
       }
 
+      // def bip(t: Tree): Term = t match {
+      //   case ExIntIdentifier(id) => id: TermName
+      //   case _                   => null
+      // }
+
       def et(t: Tree): Term = t match {
         case ExIntLiteral(value) => IntLit(value)
         case ExIntIdentifier(id) => {
-          extractedSymbols = extractedSymbols + id.symbol
+          extractedSymbols = extractedSymbols + t.symbol
           Variable(id.toString)
         }
         case ExPlus(l,r) => Plus(et(l), et(r))
@@ -801,7 +808,7 @@ trait ChooseTransformer
       def et(t: Tree): bapa.ASTBAPASyn.PAInt = t match {
         case ExIntLiteral(value) => bapa.ASTBAPASyn.IntConst(value)
         case ExIntIdentifier(id) => {
-          extractedIntSymbols = extractedIntSymbols + id.symbol
+          extractedIntSymbols = extractedIntSymbols + t.symbol
           bapa.ASTBAPASyn.IntVar(id.toString)
         }
         case ExPlus(l,r) => bapa.ASTBAPASyn.Plus(et(l), et(r))
@@ -819,7 +826,7 @@ trait ChooseTransformer
       def es(t: Tree): bapa.ASTBAPASyn.BASet = t match {
         case ExEmptySet() => bapa.ASTBAPASyn.EmptySet
         case ExSetIdentifier(id) => {
-          extractedSetSymbols = extractedSetSymbols + id.symbol
+          extractedSetSymbols = extractedSetSymbols + t.symbol
           bapa.ASTBAPASyn.SetVar(id.toString)
         }
         case ExUnion(l,r) => bapa.ASTBAPASyn.Union(es(l),es(r))

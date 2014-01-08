@@ -120,7 +120,7 @@ trait CodeGeneration {
         } else {
           val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
           ValDef(tempTupleSym, bigIteExpr) :: (
-            for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
+            for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), tupleField(valCount, (c+1))))
           ).toList
         }
       } else {
@@ -192,7 +192,7 @@ trait CodeGeneration {
           } else {
             val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
             ValDef(tempTupleSym, iteExpr) :: (
-              for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), definitions.tupleField(valCount, (c+1))))
+              for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), tupleField(valCount, (c+1))))
             ).toList
           }
         } else {

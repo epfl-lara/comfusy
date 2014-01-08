@@ -213,7 +213,7 @@ trait ArithmeticExtractors {
   private lazy val synthDefModule = rootMirror.getRequiredModule("synthesis.Definitions")
 
   object ExExGeneric {
-    val SELECTOR_DUMMY_NAME = newTermName(nme.SELECTOR_DUMMY)
+    val SELECTOR_DUMMY_NAME = nme.SELECTOR_DUMMY
     def ua(tree: Tree, opName: Name) : Option[(Tree,Tree)] = tree match {
       case UnApply(
         Apply(
