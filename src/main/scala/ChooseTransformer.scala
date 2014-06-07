@@ -400,7 +400,7 @@ trait ChooseTransformer
           // CODE GENERATION
           var symbolMap: SymbolMap = Map.empty
           // we put in the 'c' symbols
-          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
+          preCardAssigns.map(_._1).foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(TermName(unit.fresh.newName(nme))).setInfo(definitions.IntClass.tpe) ) } )
           inIntVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
           inSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
 
@@ -415,13 +415,13 @@ trait ChooseTransformer
             dprintln(paPrec)
             dprintln(paProg)
             val mikiFun: Tree = codeGen.programToCode(paPrec, paProg, true)
-            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(unit.fresh.newName(nme)).setInfo(definitions.IntClass.tpe) ) } )
+            linOutVars.foreach(nme => { symbolMap = symbolMap + (nme -> currentOwner.newValue(TermName(unit.fresh.newName(nme))).setInfo(definitions.IntClass.tpe) ) } )
 
             val lovss = linOutVars.size
             if(lovss == 1) {
               List(ValDef(symbolMap(linOutVars.head), mikiFun))
             } else {
-              val tempTupleSym = currentOwner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
+              val tempTupleSym = currentOwner.newValue(TermName(unit.fresh.newName("tempTuple$"))).setInfo(definitions.tupleType(linOutVars.map(n => definitions.IntClass.tpe)))
               ValDef(tempTupleSym, mikiFun) :: (
                 for(c <- 0 until lovss) yield ValDef(symbolMap(linOutVars(c)), Select(Ident(tempTupleSym), tupleField(lovss, c+1)))).toList
             }
@@ -430,7 +430,7 @@ trait ChooseTransformer
           outSetVarList.foreach(sym => { symbolMap = symbolMap + (sym.name.toString -> sym) } )
           val concludingAssigns: List[Tree] = (for(ass <- asss) yield {
             if(!symbolMap.isDefinedAt(ass.setName)) {
-              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(unit.fresh.newName(ass.setName + "$")).setInfo(instantiatedSetType))
+              symbolMap = symbolMap + (ass.setName -> currentOwner.newValue(TermName(unit.fresh.newName(ass.setName + "$"))).setInfo(instantiatedSetType))
             }
             ass match {
               case bapa.ASTBAPASyn.Simple(nme, setExpr) => ValDef(symbolMap(nme), codeGen.setTermToCode(symbolMap, setExpr, underlyingElementTypeTree))

@@ -33,22 +33,22 @@ trait CodeGeneration {
 
     // defines a new variable and returns a new symbol map with it
     private def assign(map: SymbolMap, varNme: String, expr: PATerm): (SymbolMap,Tree) = {
-      val newSym = owner.newValue(unit.fresh.newName("s")).setInfo(definitions.IntClass.tpe)
+      val newSym = owner.newValue(TermName(unit.fresh.newName("s"))).setInfo(definitions.IntClass.tpe)
       (map + (varNme -> newSym), ValDef(newSym, termToCode(map, expr)))
     }
 
     private def apaAssign(map: SymbolMap, varNme: String, expr: APATerm): (SymbolMap,Tree) = {
-      val newSym = owner.newValue(unit.fresh.newName("s")).setInfo(definitions.IntClass.tpe)
+      val newSym = owner.newValue(TermName(unit.fresh.newName("s"))).setInfo(definitions.IntClass.tpe)
       (map + (varNme -> newSym), ValDef(newSym, apaTermToCode(map, expr)))
     }
 
     private def apaInputAssign(map: SymbolMap, expr: /*APA*/InputAssignment): (SymbolMap,List[Tree]) = expr match {
       case SingleInputAssignment(inVar, inTerm) => {
-        val newSym = owner.newValue(unit.fresh.newName("t")).setInfo(definitions.IntClass.tpe)
+        val newSym = owner.newValue(TermName(unit.fresh.newName("t"))).setInfo(definitions.IntClass.tpe)
         (map + (inVar.name -> newSym), List(ValDef(newSym, apaInTermToCode(map, inTerm))))
       }
       case BezoutInputAssignment(vss, ts) => {
-        val matrixSym = owner.newValue(unit.fresh.newName("m")).setInfo(matrixIteratorClass.tpe)
+        val matrixSym = owner.newValue(TermName(unit.fresh.newName("m"))).setInfo(matrixIteratorClass.tpe)
         var newMap: SymbolMap = map
         var trees: List[Tree] = Nil
 
@@ -56,7 +56,7 @@ trait CodeGeneration {
         trees = trees ::: (ValDef(matrixSym, New(Ident(matrixIteratorClass), List(List( Apply(Select(Select(Ident(synthesisPack), synthesisCommon), bezoutFunction), List(Literal(Constant(1)), Apply(Ident(definitions.ListModule), ts.map(apaInTermToCode(map, _))))))))) :: Nil)
 
         (vss.flatten:List[synthesis.InputVar]).foreach((v:synthesis.InputVar) => {
-          val newSym = owner.newValue(unit.fresh.newName("t")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newValue(TermName(unit.fresh.newName("t"))).setInfo(definitions.IntClass.tpe)
           newMap = newMap + (v.name -> newSym)
           trees = trees ::: (ValDef(newSym, Select(Ident(matrixSym), matrixIteratorClassNext.name)) :: Nil)
         })
@@ -106,7 +106,7 @@ trait CodeGeneration {
         val valCount = valNames.size
         // ...prepare a symbol for each of them.
         valNames.foreach(vn => {
-          val newSym = owner.newValue(unit.fresh.newName("csOut")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newValue(TermName(unit.fresh.newName("csOut"))).setInfo(definitions.IntClass.tpe)
           map = map + (vn -> newSym)
         })
 
@@ -118,7 +118,7 @@ trait CodeGeneration {
         if (valCount == 1) {
           List(ValDef(map(valNames.head), bigIteExpr))
         } else {
-          val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple$")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+          val tempTupleSym = owner.newValue(TermName(unit.fresh.newName("tempTuple$"))).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
           ValDef(tempTupleSym, bigIteExpr) :: (
             for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), tupleField(valCount, (c+1))))
           ).toList
@@ -179,7 +179,7 @@ trait CodeGeneration {
           val valNames = programs(0)._2.output_variables.map(ov => ov.name)
           val valCount = valNames.size
           valNames.foreach(vn => {
-            val newSym = owner.newValue(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
+            val newSym = owner.newValue(TermName(unit.fresh.newName("y"))).setInfo(definitions.IntClass.tpe)
             map = map + (vn -> newSym)
           })
 
@@ -190,7 +190,7 @@ trait CodeGeneration {
           if (valCount == 1) {
             List(ValDef(map(valNames.head), iteExpr))
           } else {
-            val tempTupleSym = owner.newValue(unit.fresh.newName("tempTuple")).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
+            val tempTupleSym = owner.newValue(TermName(unit.fresh.newName("tempTuple"))).setInfo(definitions.tupleType(valNames.map(n => definitions.IntClass.tpe)))
             ValDef(tempTupleSym, iteExpr) :: (
               for(c <- 0 until valCount) yield ValDef(map(valNames(c)), Select(Ident(tempTupleSym), tupleField(valCount, (c+1))))
             ).toList
@@ -210,16 +210,16 @@ trait CodeGeneration {
           val valCount = valNames.size
           // note that these are mutable.
           val valSyms: List[Symbol] = valNames.map(vn => {
-            val newSym = owner.newVariable(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
+            val newSym = owner.newVariable(TermName(unit.fresh.newName("y"))).setInfo(definitions.IntClass.tpe)
             map = map + (vn -> newSym)
             newSym
           })
 
-          val fSym = owner.newVariable(unit.fresh.newName("f")).setInfo(definitions.BooleanClass.tpe)
-          val lbSym = owner.newValue(unit.fresh.newName("lb")).setInfo(definitions.IntClass.tpe)
-          val ubSym = owner.newValue(unit.fresh.newName("ub")).setInfo(definitions.IntClass.tpe)
+          val fSym = owner.newVariable(TermName(unit.fresh.newName("f"))).setInfo(definitions.BooleanClass.tpe)
+          val lbSym = owner.newValue(TermName(unit.fresh.newName("lb"))).setInfo(definitions.IntClass.tpe)
+          val ubSym = owner.newValue(TermName(unit.fresh.newName("ub"))).setInfo(definitions.IntClass.tpe)
           val counterSyms = vs.map(iv => {
-          val newSym = owner.newVariable(unit.fresh.newName("y")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newVariable(TermName(unit.fresh.newName("y"))).setInfo(definitions.IntClass.tpe)
             map = map + (iv.name -> newSym)
             newSym
           })
@@ -332,8 +332,8 @@ trait CodeGeneration {
     }
 
     def flooredDivision(t1: Tree, t2: Tree): Tree = {
-        val numSym = owner.newValue(unit.fresh.newName("n")).setInfo(definitions.IntClass.tpe)
-        val denSym = owner.newValue(unit.fresh.newName("d")).setInfo(definitions.IntClass.tpe)
+        val numSym = owner.newValue(TermName(unit.fresh.newName("n"))).setInfo(definitions.IntClass.tpe)
+        val denSym = owner.newValue(TermName(unit.fresh.newName("d"))).setInfo(definitions.IntClass.tpe)
         val numTree = Ident(numSym)
         val denTree = Ident(denSym)
         Block(
@@ -445,11 +445,11 @@ trait CodeGeneration {
     def apaSplitConditionToCode(topMap: SymbolMap, splitCond: APASplitCondition): Tree = splitCond match {
       case APAForCondition(vs, lb, ub, cond) => {
         var newMap: SymbolMap = topMap
-        val fSym = owner.newVariable(unit.fresh.newName("f")).setInfo(definitions.BooleanClass.tpe)
-        val lbSym = owner.newValue(unit.fresh.newName("lb")).setInfo(definitions.IntClass.tpe)
-        val ubSym = owner.newValue(unit.fresh.newName("ub")).setInfo(definitions.IntClass.tpe)
+        val fSym = owner.newVariable(TermName(unit.fresh.newName("f"))).setInfo(definitions.BooleanClass.tpe)
+        val lbSym = owner.newValue(TermName(unit.fresh.newName("lb"))).setInfo(definitions.IntClass.tpe)
+        val ubSym = owner.newValue(TermName(unit.fresh.newName("ub"))).setInfo(definitions.IntClass.tpe)
         val counterSyms: List[Symbol] = vs.map((v:synthesis.InputVar) => {
-          val newSym = owner.newVariable(unit.fresh.newName("i")).setInfo(definitions.IntClass.tpe)
+          val newSym = owner.newVariable(TermName(unit.fresh.newName("i"))).setInfo(definitions.IntClass.tpe)
           newMap = newMap + (v.name -> newSym)
           newSym
         })
@@ -484,7 +484,7 @@ trait CodeGeneration {
 
     // builds a for loop which increments the counter while condTree holds
     def makeForLoop(counter: Symbol, condTree: Tree, body: Tree): Tree = {
-      val label = owner.newLabel(unit.fresh.newName("forloop$")).setInfo(MethodType(Nil, definitions.UnitClass.tpe))
+      val label = owner.newLabel(TermName(unit.fresh.newName("forloop$"))).setInfo(MethodType(Nil, definitions.UnitClass.tpe))
       val continu = Apply(Ident(label), Nil)
       val rhs = If(condTree, Block(body :: Assign(Ident(counter), Apply(Select(Ident(counter), nme.ADD), List(Literal(Constant(1))))) :: Nil, continu), EmptyTree)
       LabelDef(label, Nil, rhs)
