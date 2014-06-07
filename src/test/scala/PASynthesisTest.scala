@@ -1,9 +1,8 @@
 package synthesis
 
 import org.scalatest._
-import org.scalatest.matchers._
 
-class PASynthesisTest extends FunSpec with ShouldMatchers {
+class PASynthesisTest extends FunSpec with Matchers {
   import PASynthesis._
   def O(name: String) = PASynthesis.OutputVar(name)
   def I(name: String) = PASynthesis.InputVar(name)

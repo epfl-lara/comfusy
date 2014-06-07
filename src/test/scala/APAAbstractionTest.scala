@@ -1,9 +1,8 @@
 package synthesis
 
 import org.scalatest._
-import org.scalatest.matchers._
 
-class APAAbstractionTest extends FunSpec with ShouldMatchers {
+class APAAbstractionTest extends FunSpec with Matchers {
   def O(name: String) = OutputVar(name)
   def I(name: String) = InputVar(name)
   implicit def OutputVarToPACombination(o: OutputVar):APACombination = APACombination(o)
