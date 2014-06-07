@@ -1,9 +1,8 @@
 package synthesis
 
 import org.scalatest._
-import org.scalatest.matchers._
 
-class CommonTest extends FunSpec with ShouldMatchers {
+class CommonTest extends FunSpec with Matchers {
   import Common._
 
   describe("Common functions") {
